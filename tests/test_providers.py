@@ -140,3 +140,72 @@ def test_prisma_transcript_and_provider_failure_are_explicit(monkeypatch):
     r = client.post(path, headers=headers(t), files=files)
     assert r.status_code == 502 and "No automatic retry" in r.json()["detail"]
     assert responses == []
+
+
+def test_translation_rejects_changed_timestamps(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-test-key")
+    game.TRANSLATIONS.clear()
+
+    def handler(request):
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {"text": '{"text":"The pickup is at 09:00 and 23:45."}'}
+                            ]
+                        }
+                    }
+                ]
+            },
+        )
+
+    use_transport(monkeypatch, handler)
+    code, t = create(role="archive")
+    start(code, t)
+    from test_game import act
+
+    act(code, t, "inspect", target="docket")
+    act(code, t, "language", target="hi")
+    passage = next(
+        e["text"]
+        for e in game.CASES["last-announcement"]["evidence"]
+        if e["id"] == "docket"
+    )
+    r = client.post(
+        f"/api/rooms/{code}/translate", headers=headers(t), json={"text": passage}
+    )
+    assert r.status_code == 502 and "number or time" in r.json()["detail"]
+    assert not game.TRANSLATIONS
+
+
+def test_translation_rejects_wrong_indic_script(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-test-key")
+    game.TRANSLATIONS.clear()
+
+    def handler(request):
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [{"text": json.dumps({"text": "এটি বাংলা ভাষা"})}]
+                        }
+                    }
+                ]
+            },
+        )
+
+    use_transport(monkeypatch, handler)
+    code, t = create()
+    start(code, t)
+    act(code, t, "language", target="hi")
+    text = game.CASES["last-announcement"]["characters"][0]["initial"]
+    r = client.post(
+        f"/api/rooms/{code}/translate", headers=headers(t), json={"text": text}
+    )
+    assert r.status_code == 502 and "unexpected language" in r.json()["detail"]
+    assert not game.TRANSLATIONS
