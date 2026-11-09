@@ -96,6 +96,7 @@ def test_location_gate_and_share_route():
     assert act(code, t, "inspect", target="found").status_code == 403
     act(code, t, "switch")
     inspect_share(code, t, "route")
+    assert act(code, t, "assist", target="service_gate").status_code == 200
     act(code, t, "switch")
     assert act(code, t, "inspect", target="found").status_code == 200
 
@@ -206,6 +207,7 @@ def test_both_cases_completable_without_provider_calls(case_id):
         act(code, t, "switch")
         for id in ["route", "access", "docket", "broadcast"]:
             inspect_share(code, t, id)
+        assert act(code, t, "assist", target="service_gate").status_code == 200
         act(code, t, "switch")
         inspect_share(code, t, "found")
         client.post(

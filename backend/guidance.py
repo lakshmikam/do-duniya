@@ -1,6 +1,25 @@
 """Spoiler-bounded next actions derived only from discoveries visible to a player."""
 
 
+def handoff_prompt(evidence_id):
+    return {
+        "route": "Use this shared route to reach the relay passage.",
+        "broadcast": "Compare this record with what witnesses say they heard.",
+        "access": "Compare who held the key with the witness accounts.",
+        "docket": "Check whether this matches the claimed overnight pickup.",
+        "note": "Help follow the route Arun describes.",
+        "seal": "Compare this with the authorized pickup paperwork.",
+        "found": "Compare Arun’s account with the access and pickup records.",
+        "admission": "Check this account against our shared records before reconstructing.",
+        "alpha": "Follow this lead from the inn to the market.",
+        "ryder": "Compare this hotel role with the returning visitor.",
+        "twins": "Compare this with the description of the bird.",
+        "stone": "Help connect the recovered jewel to the hotel.",
+        "visitor": "Check this visitor against the hotel records.",
+        "supplier": "Follow this supply trail to Brixton Road.",
+    }.get(evidence_id, "Compare this clue with what you have found on your side.")
+
+
 def next_objective(c, r, p):
     own = r["discoveries"][p["role"]]
     shared = set(r["shared"])
@@ -26,6 +45,17 @@ def next_objective(c, r, p):
         }
     if c["id"] == "last-announcement":
         if p["role"] == "archive":
+            if "route" in shared and not r.get("cooperation", {}).get("service_gate"):
+                return {
+                    "phase": "assist",
+                    "text": "Your partner has the route. Power the service gate from the signal cabin. They must reach the passage and release the store latch physically from their side.",
+                    "action": {
+                        "kind": "assist",
+                        "target": "service_gate",
+                        "location": "console",
+                    },
+                    "source_ids": ["route"],
+                }
             sequence = [
                 (
                     "broadcast",
@@ -52,7 +82,18 @@ def next_objective(c, r, p):
                         "action": locate(id),
                         "source_ids": [],
                     }
-            text = "Your records are shared. Ask your partner what they found in the relay passage; compare that account with the key and collection records."
+            if not r.get("cooperation", {}).get("service_gate"):
+                return {
+                    "phase": "assist",
+                    "text": "Your partner has the service route. Power the electric service gate from the signal cabin so they can reach the passage. They must release the store latch physically from their side.",
+                    "action": {
+                        "kind": "assist",
+                        "target": "service_gate",
+                        "location": "console",
+                    },
+                    "source_ids": ["route"],
+                }
+            text = "Your records are shared and the service gate is powered. Ask your partner what they found in the relay passage; compare that account with the key and collection records."
             if "admission" not in known:
                 return {
                     "phase": "coordinate",
@@ -91,6 +132,17 @@ def next_objective(c, r, p):
                     "source_ids": ["note"],
                 }
             if "found" not in known:
+                if not r.get("cooperation", {}).get("service_gate"):
+                    return {
+                        "phase": "coordinate",
+                        "text": "The shared route reaches an electric service gate. Ask your records partner to power it from the signal cabin. Then enter the passage and release the separate store latch yourself.",
+                        "action": {
+                            "kind": "partner",
+                            "target": "service_gate",
+                            "location": "relay",
+                        },
+                        "source_ids": ["route"],
+                    }
                 return {
                     "phase": "follow",
                     "text": "Your partner found a route. Follow it to the relay passage and investigate the voice behind the door.",
@@ -158,7 +210,12 @@ def next_objective(c, r, p):
                 return {
                     "phase": "investigate",
                     "text": "See whether Baker wants his original goose back, or would accept a replacement. What does his reaction suggest?",
-                    "action": locate("baker"),
+                    "action": {
+                        "kind": "character",
+                        "target": "henry",
+                        "location": "street",
+                        "topic": "remains",
+                    },
                     "source_ids": ["stone"],
                 }
             if "alpha" not in known:
@@ -186,7 +243,16 @@ def next_objective(c, r, p):
                     return {
                         "phase": "follow",
                         "text": text,
-                        "action": locate(id),
+                        "action": (
+                            {
+                                "kind": "character",
+                                "target": "dealer",
+                                "location": "market",
+                                "topic": "visitor",
+                            }
+                            if id == "visitor"
+                            else locate(id)
+                        ),
                         "source_ids": [x for x in ["alpha", "supplier"] if x in known],
                     }
             if "ryder" not in known:

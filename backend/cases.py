@@ -130,7 +130,7 @@ TRAIN = {
         clue(
             "route",
             "The service route",
-            "The service gate leads to the old relay store and then the west loading bay. The store latch can only be released from the passage. Share this route with your field partner.",
+            "The electric service gate leads to the old relay store and then the west loading bay. The signal cabin supplies power to that gate. The separate store latch can only be released physically from the passage. Share this route with your field partner.",
             "archive",
             "records",
         ),
@@ -194,7 +194,7 @@ TRAIN = {
             "occupation": "Night porter",
             "role": "field",
             "location": "platform",
-            "initial": "I left when I heard “evacuate”. I thought the water had reached the coach. Please don’t confuse being afraid with stealing something.",
+            "initial": "I was already at the canteen when I heard “evacuate”. I thought the water had reached the coach. Please don’t confuse being afraid with stealing something.",
             "responses": [
                 response(
                     "where",
@@ -434,6 +434,7 @@ BLUE = {
                     "remains",
                     "Offer the remains of his original goose",
                     "No need to keep the feathers or crop for me. A fresh bird is quite sufficient.",
+                    "baker",
                 ),
             ],
         },
@@ -454,6 +455,7 @@ BLUE = {
                     "visitor",
                     "Ask about the returning visitor",
                     "A nervous little man wants a particular barred-tailed bird. He says Mrs Oakshott sent him. He calls himself Ryder now.",
+                    "visitor",
                 ),
             ],
         },

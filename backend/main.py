@@ -13,7 +13,9 @@ import sqlite3
 import threading
 import time
 import wave
+import weakref
 from datetime import datetime, timezone
+from collections import deque
 from fastapi import (
     FastAPI,
     HTTPException,
@@ -29,7 +31,7 @@ from pydantic import BaseModel, Field
 import httpx
 from .cases import CASES, catalog
 from .cast import PROFILES
-from .guidance import next_objective
+from .guidance import next_objective, handoff_prompt
 
 ROOT = Path(__file__).resolve().parents[1]
 if (ROOT / ".env").exists():
@@ -46,6 +48,8 @@ ROOMS = {}
 SOCKETS = {}
 TRANSLATIONS = {}
 AUDIO_CACHE = {}
+RADIO_FLOORS = {}
+GNANI_GATES = weakref.WeakKeyDictionary()
 LANGUAGES = {
     "en": "English",
     "te": "Telugu",
@@ -196,6 +200,13 @@ def view(r, p):
         "players": [
             {key: x[key] for key in ["id", "name", "role", "ready", "language"]}
             | {"connected": x["id"] in SOCKETS.get(r["code"], {})}
+            | {
+                "radio": bool(x.get("radio")) and x["id"] in SOCKETS.get(r["code"], {}),
+                "scene": x.get("scene", ""),
+                "interviewing": x.get("interviewing", ""),
+                "radio_talking": RADIO_FLOORS.get(r["code"], {}).get("owner") == x["id"]
+                and RADIO_FLOORS.get(r["code"], {}).get("until", 0) > time.monotonic(),
+            }
             for x in r["players"]
         ],
         "locations": locations,
@@ -212,6 +223,30 @@ def view(r, p):
         },
         "events": r["events"][-15:],
         "notes": r["notes"][-20:],
+        "messages": r.get("messages", [])[-40:],
+        "cooperation": r.get("cooperation", {}),
+        "scene_audio": (
+            [
+                {
+                    "id": "incident-pa",
+                    "location": "platform" if p["role"] == "field" else "console",
+                    "title": (
+                        "The announcement passengers heard"
+                        if p["role"] == "field"
+                        else "Replay file E-14"
+                    ),
+                    "text": "Attention. Evacuate the coach. Keep the luggage aisle clear.",
+                    "caption": (
+                        "Authored incident reconstruction. Compare the wording with the official record; a voice match alone proves nothing."
+                        if p["role"] == "field"
+                        else "Authored rendering of the old drill. The broadcast log records how and when it was used."
+                    ),
+                }
+            ]
+            if c["id"] == "last-announcement"
+            and (p["role"] == "field" or "broadcast" in k)
+            else []
+        ),
         "hint": r.get("hint"),
         "proposal": r["proposal"],
         "questions": c["questions"],
@@ -404,6 +439,17 @@ async def action(code: str, body: Action, authorization: str = Header(default=""
             r["status"] = "playing"
             r["running_since"] = time.time()
             event(r, "The investigation has begun.")
+        elif body.kind == "reopen":
+            if r["status"] != "completed" or r.get("result", {}).get("success"):
+                fail("Only an incorrect reconstruction can be reopened.", 409)
+            r["status"] = "playing"
+            r["proposal"] = None
+            r.pop("result", None)
+            r["running_since"] = time.time()
+            event(
+                r,
+                "The investigators returned to the evidence to revise their reconstruction.",
+            )
         elif body.kind == "language":
             if body.target not in LANGUAGES:
                 fail("Unsupported language.")
@@ -421,7 +467,36 @@ async def action(code: str, body: Action, authorization: str = Header(default=""
         else:
             if r["status"] != "playing":
                 fail("Resume the investigation before taking an action.", 409)
-            if body.kind == "inspect":
+            if body.kind == "assist":
+                if (
+                    c["id"] != "last-announcement"
+                    or p["role"] != "archive"
+                    or body.target != "service_gate"
+                ):
+                    fail("That control belongs to the records investigator.", 403)
+                if "route" not in r["shared"]:
+                    fail(
+                        "Find and share the service route before powering the gate.",
+                        409,
+                    )
+                if not r.setdefault("cooperation", {}).get("service_gate"):
+                    r["cooperation"]["service_gate"] = True
+                    event(
+                        r,
+                        f"{p['name']} powered the service gate. The field investigator can now reach the store latch.",
+                    )
+                    r.setdefault("messages", []).append(
+                        {
+                            "id": secrets.token_hex(5),
+                            "author": p["name"],
+                            "author_id": p["id"],
+                            "kind": "message",
+                            "text": "Service gate powered. Follow the passage and release the store latch from your side.",
+                            "time": time.time(),
+                        }
+                    )
+                    r["messages"] = r["messages"][-40:]
+            elif body.kind == "inspect":
                 e = next((e for e in c["evidence"] if e["id"] == body.target), None)
                 if (
                     not e
@@ -433,6 +508,18 @@ async def action(code: str, body: Action, authorization: str = Header(default=""
                 location = next(l for l in c["locations"] if l["id"] == e["location"])
                 if not unlocked(r, p, location):
                     fail("Follow the earlier lead to reach this location.", 409)
+                if c["id"] == "last-announcement" and e["id"] == "found":
+                    if not r.get("cooperation", {}).get("service_gate"):
+                        fail(
+                            "Ask your records partner to power the service gate at the signal cabin. Then release the store latch from the passage.",
+                            409,
+                        )
+                    if not r["cooperation"].get("store_latch"):
+                        r["cooperation"]["store_latch"] = True
+                        event(
+                            r,
+                            f"{p['name']} released the store latch. Both perspectives opened the passage together.",
+                        )
                 discover(r, p, e["id"])
             elif body.kind == "share":
                 if body.target not in known(r, p):
@@ -441,6 +528,40 @@ async def action(code: str, body: Action, authorization: str = Header(default=""
                     r["shared"].append(body.target)
                     e = next(e for e in c["evidence"] if e["id"] == body.target)
                     event(r, f"{p['name']} shared: {e['title']}.")
+                    r.setdefault("messages", []).append(
+                        {
+                            "id": secrets.token_hex(5),
+                            "author": p["name"],
+                            "author_id": p["id"],
+                            "text": e["title"],
+                            "evidence_id": e["id"],
+                            "kind": "clue",
+                            "comment": body.text.strip(),
+                            "prompt": handoff_prompt(e["id"]),
+                            "time": time.time(),
+                        }
+                    )
+                    r["messages"] = r["messages"][-40:]
+            elif body.kind == "message":
+                if not body.text.strip():
+                    fail("Write a message first.")
+                if body.target and body.target not in r["shared"]:
+                    fail(
+                        "Share the clue before referring to it in a partner message.",
+                        403,
+                    )
+                r.setdefault("messages", []).append(
+                    {
+                        "id": secrets.token_hex(5),
+                        "author": p["name"],
+                        "author_id": p["id"],
+                        "text": body.text.strip(),
+                        "evidence_id": body.target or None,
+                        "kind": "message",
+                        "time": time.time(),
+                    }
+                )
+                r["messages"] = r["messages"][-40:]
             elif body.kind == "note":
                 if not body.text.strip():
                     fail("Write a theory first.")
@@ -543,9 +664,138 @@ async def live(ws: WebSocket, code: str):
             r, p = member(code, str(hello.get("token", "")))
             pid = p["id"]
         SOCKETS.setdefault(r["code"], {})[pid] = (ws, p["token"])
+        p["radio"] = False
+        p["interviewing"] = ""
         await publish(r)
+        radio_ticks = deque()
         while True:
-            await ws.receive_text()
+            raw = await ws.receive_text()
+            if time.time() - r["created"] > 86400:
+                await ws.close(code=1008)
+                break
+            if len(raw) > 30000:
+                await ws.close(code=1009)
+                break
+            try:
+                packet = json.loads(raw)
+            except ValueError:
+                packet = {}
+            if not isinstance(packet, dict):
+                packet = {}
+            if packet.get("type") in [
+                "radio",
+                "radio_state",
+                "presence",
+                "radio_claim",
+                "radio_end",
+            ]:
+                if SOCKETS.get(r["code"], {}).get(pid, (None,))[0] is not ws:
+                    break
+                if packet["type"] == "radio_claim":
+                    floor = RADIO_FLOORS.get(r["code"], {})
+                    granted = (
+                        r["status"] == "playing"
+                        and p.get("radio")
+                        and not r["solo"]
+                        and (
+                            floor.get("owner") in [None, pid]
+                            or floor.get("until", 0) < time.monotonic()
+                        )
+                    )
+                    if granted:
+                        RADIO_FLOORS[r["code"]] = {
+                            "owner": pid,
+                            "until": time.monotonic() + 2,
+                        }
+                    await ws.send_json(
+                        {
+                            "type": "radio_control",
+                            "granted": bool(granted),
+                            "request_id": str(packet.get("request_id", ""))[:32],
+                        }
+                    )
+                    if granted:
+                        await publish(r)
+                elif packet["type"] == "radio_end":
+                    if RADIO_FLOORS.get(r["code"], {}).get("owner") == pid:
+                        RADIO_FLOORS.pop(r["code"], None)
+                        await publish(r)
+                elif packet["type"] == "radio_state":
+                    p["radio"] = (
+                        bool(packet.get("enabled"))
+                        and not r["solo"]
+                        and r["status"] == "playing"
+                    )
+                    if (
+                        not p["radio"]
+                        and RADIO_FLOORS.get(r["code"], {}).get("owner") == pid
+                    ):
+                        RADIO_FLOORS.pop(r["code"], None)
+                    await publish(r)
+                elif packet["type"] == "presence":
+                    loc = next(
+                        (
+                            l
+                            for l in case(r)["locations"]
+                            if l["id"] == packet.get("location")
+                            and l["role"] == p["role"]
+                            and unlocked(r, p, l)
+                        ),
+                        None,
+                    )
+                    if loc:
+                        p["scene"] = loc["name"]
+                    ch = next(
+                        (
+                            c
+                            for c in view(r, p)["characters"]
+                            if c["id"] == packet.get("character")
+                        ),
+                        None,
+                    )
+                    p["interviewing"] = ch["name"] if ch else ""
+                    await publish(r)
+                elif r["status"] == "playing" and p.get("radio") and not r["solo"]:
+                    now = time.monotonic()
+                    floor = RADIO_FLOORS.get(r["code"], {})
+                    if floor.get("owner") != pid or floor.get("until", 0) < now:
+                        continue
+                    while radio_ticks and now - radio_ticks[0] > 1:
+                        radio_ticks.popleft()
+                    if len(radio_ticks) >= 8:
+                        continue
+                    radio_ticks.append(now)
+                    encoded = packet.get("audio", "")
+                    if not isinstance(encoded, str) or len(encoded) > 14000:
+                        continue
+                    try:
+                        pcm = base64.b64decode(encoded, validate=True)
+                    except ValueError:
+                        continue
+                    if not 200 <= len(pcm) <= 10000 or len(pcm) % 2:
+                        continue
+                    floor["until"] = now + 2
+                    # Live PCM is relayed only to the other authenticated player.
+                    # No room save, transcript, model call, or audio retention.
+                    for peer_id, (peer, _) in list(SOCKETS.get(r["code"], {}).items()):
+                        other = next(
+                            (x for x in r["players"] if x["id"] == peer_id), None
+                        )
+                        if peer_id != pid and other and other.get("radio"):
+                            try:
+                                await asyncio.wait_for(
+                                    peer.send_json(
+                                        {"type": "radio", "from": pid, "audio": encoded}
+                                    ),
+                                    0.2,
+                                )
+                            except (
+                                RuntimeError,
+                                WebSocketDisconnect,
+                                asyncio.TimeoutError,
+                            ):
+                                pass
+                continue
             await ws.send_json(view(r, p))
     except (WebSocketDisconnect, asyncio.TimeoutError, HTTPException):
         pass
@@ -553,6 +803,13 @@ async def live(ws: WebSocket, code: str):
         sockets = SOCKETS.get(code.upper(), {})
         if pid and sockets.get(pid, (None,))[0] is ws:
             sockets.pop(pid, None)
+            if RADIO_FLOORS.get(code.upper(), {}).get("owner") == pid:
+                RADIO_FLOORS.pop(code.upper(), None)
+            if code.upper() in ROOMS:
+                for player in ROOMS[code.upper()]["players"]:
+                    if player["id"] == pid:
+                        player["radio"] = False
+                        player["interviewing"] = ""
             if code.upper() in ROOMS:
                 await publish(ROOMS[code.upper()])
         try:
@@ -721,6 +978,7 @@ async def ask(code: str, body: Ask, authorization: str = Header(default="")):
                     "Unavailable topic",
                 ),
                 "topic": chosen["id"] if chosen else "unknown",
+                "answer": chosen["text"] if chosen else ch["voice_profile"]["fallback"],
             }
         )
         del recent[:-8]
@@ -740,6 +998,7 @@ async def ask(code: str, body: Ask, authorization: str = Header(default="")):
 def accessible_texts(r, p):
     v = view(r, p)
     texts = {case(r)["brief"], case(r)["credit"]}
+    texts.update(a["text"] for a in v["scene_audio"])
     texts.update(l["description"] for l in v["locations"] if not l["locked"])
     for ch in v["characters"]:
         texts.update(t["label"] for t in ch["topics"])
@@ -832,6 +1091,24 @@ async def translate(
 
 
 async def gnani(r, path, key, **kwargs):
+    loop = asyncio.get_running_loop()
+    state = GNANI_GATES.setdefault(loop, {"gate": asyncio.Semaphore(1), "waiting": 0})
+    if state["waiting"] >= 6:
+        fail("Voice services are busy. Your progress is safe; try again shortly.", 429)
+    state["waiting"] += 1
+    try:
+        await asyncio.wait_for(state["gate"].acquire(), 15)
+    except asyncio.TimeoutError:
+        fail("Voice service queue is busy. No retry was made.", 429)
+    finally:
+        state["waiting"] -= 1
+    try:
+        return await gnani_request(r, path, key, **kwargs)
+    finally:
+        state["gate"].release()
+
+
+async def gnani_request(r, path, key, **kwargs):
     if not key:
         fail(
             "Gnani voice is not configured on this server. Text play remains available.",
@@ -846,6 +1123,11 @@ async def gnani(r, path, key, **kwargs):
                 headers={"X-API-Key-ID": key},
                 **kwargs,
             ) as response:
+                if response.status_code == 429:
+                    fail(
+                        "Gnani reports a quota or concurrency limit. Your progress is safe; no retry was made.",
+                        429,
+                    )
                 if response.status_code != 200:
                     fail(
                         "Gnani could not complete this request. No automatic retry was made.",
@@ -877,9 +1159,25 @@ async def speech(code: str, body: Speak, authorization: str = Header(default="")
     profile = PROFILES.get(
         body.character, {"voice": "Shivani", "speed": 1.0, "tag": ""}
     )
+    if body.character == "station_announcer":
+        profile = {"voice": "Shubham", "speed": 0.97, "tag": "<slow>"}
     voice = profile["voice"]
+    ch = next((c for c in case(r)["characters"] if c["id"] == body.character), None)
+    expressive = (
+        body.character == "station_announcer"
+        or ch
+        and (
+            body.text == ch["initial"]
+            or any(
+                a["text"] == body.text
+                and a["id"] in ["pressure", "fear", "feelings", "temper", "confront"]
+                for a in ch["responses"]
+            )
+        )
+    )
+    tag = profile["tag"] if expressive else ""
     locale = "hi-en" if language == "hi-en" else language + "-IN"
-    cache = (text, locale, voice, profile["speed"], profile["tag"])
+    cache = (text, locale, voice, profile["speed"], tag)
     if cache in AUDIO_CACHE:
         return Response(
             AUDIO_CACHE[cache],
@@ -891,7 +1189,7 @@ async def speech(code: str, body: Speak, authorization: str = Header(default="")
         "/api/v1/tts/inference",
         os.getenv("GNANI_TIMBRE_KEY") or os.getenv("GNANI_API_KEY"),
         json={
-            "text": profile["tag"] + " " + text if profile["tag"] else text,
+            "text": tag + " " + text if tag else text,
             "model": "timbre-v3.0",
             "voice": voice,
             "language": locale,
@@ -940,7 +1238,10 @@ async def speech(code: str, body: Speak, authorization: str = Header(default="")
 
 @app.post("/api/rooms/{code}/transcribe")
 async def transcribe(
-    code: str, audio: UploadFile = File(...), authorization: str = Header(default="")
+    code: str,
+    audio: UploadFile = File(...),
+    authorization: str = Header(default=""),
+    character: str = Form(default=""),
 ):
     r, p = auth(code, authorization)
     if r["status"] != "playing":
@@ -960,13 +1261,42 @@ async def transcribe(
                 raise ValueError()
     except Exception:
         fail("Use a mono PCM WAV recording of 25 seconds or less.")
-    language = "hi-IN" if p["language"] == "hi-en" else p["language"] + "-IN"
+    visible = view(r, p)
+    ch = next((c for c in visible["characters"] if c["id"] == character), None)
+    if character and not ch:
+        fail("That character is not available to this investigator.", 403)
+    language = (
+        "hi-IN,en-IN"
+        if p["language"] == "hi-en"
+        else p["language"] + "-IN" + (",en-IN" if p["language"] != "en" else "")
+    )
+    terms = [c["name"] for c in visible["characters"]] + [
+        l["name"] for l in visible["locations"] if not l["locked"]
+    ]
+    context = {
+        "model": "prisma-v3.0",
+        "language_code": language,
+        "format": "codemix" if p["language"] == "hi-en" else "transcribe",
+        "keyterms": json.dumps(terms[:20], ensure_ascii=False),
+        "topic": (
+            "A detective asks "
+            + (
+                ch["name"] + " about their work as " + ch["occupation"]
+                if ch
+                else "about a fictional investigation"
+            )
+            + ". Preserve names, numbers, uncertainty and the words actually heard."
+        )[:1600],
+    }
+    previous = r.get("transcription_context", {}).get(p["id"], {}).get(character, "")
+    if previous:
+        context["previous_text"] = previous[-600:]
     result = await gnani(
         r,
         "/stt/v3",
         os.getenv("GNANI_PRISMA_KEY") or os.getenv("GNANI_API_KEY"),
         files={"audio_file": ("question.wav", raw, "audio/wav")},
-        data={"model": "prisma-v3.0", "language_code": language},
+        data=context,
     )
     try:
         data = json.loads(result)
@@ -975,4 +1305,9 @@ async def transcribe(
             raise ValueError()
     except Exception:
         fail("No usable transcript was returned.", 502)
+    with LOCK:
+        r.setdefault("transcription_context", {}).setdefault(p["id"], {})[character] = (
+            text[-600:]
+        )
+        save(r)
     return {"text": text, "provider": "prisma-v3.0"}

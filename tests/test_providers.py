@@ -138,7 +138,7 @@ def test_prisma_transcript_and_provider_failure_are_explicit(monkeypatch):
     r = client.post(path, headers=headers(t), files=files)
     assert r.status_code == 200 and r.json()["provider"] == "prisma-v3.0"
     r = client.post(path, headers=headers(t), files=files)
-    assert r.status_code == 502 and "No automatic retry" in r.json()["detail"]
+    assert r.status_code == 429 and "no retry" in r.json()["detail"]
     assert responses == []
 
 

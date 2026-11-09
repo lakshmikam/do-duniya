@@ -1,6 +1,6 @@
 """Story continuity without leaking the other player's undiscovered evidence."""
 
-from test_game import create, start, act, room, inspect_share
+from test_game import create, start, act, room, inspect_share, client, headers
 
 
 def test_train_lead_changes_on_discovery_share_and_partner_route():
@@ -16,6 +16,7 @@ def test_train_lead_changes_on_discovery_share_and_partner_route():
     assert room(code, t)["objective"]["phase"] == "coordinate"
     act(code, t, "switch")
     inspect_share(code, t, "route")
+    act(code, t, "assist", target="service_gate")
     act(code, t, "switch")
     guide = room(code, t)["objective"]
     assert guide["phase"] == "follow" and guide["action"]["evidence_id"] == "found"
@@ -47,9 +48,20 @@ def test_both_cases_guidance_sources_are_visible_and_targets_accessible():
                     act(code, t, "switch")
             elif g["phase"] == "coordinate":
                 act(code, t, "switch")
+            elif a["kind"] == "assist":
+                assert act(code, t, "assist", target=a["target"]).status_code == 200
             elif a["kind"] == "character":
                 assert any(c["id"] == a["target"] for c in v["characters"])
-                break
+                if g["phase"] == "confront":
+                    break
+                assert (
+                    client.post(
+                        f"/api/rooms/{code}/ask",
+                        headers=headers(t),
+                        json={"character": a["target"], "topic": a["topic"]},
+                    ).status_code
+                    == 200
+                )
             else:
                 break
         assert g["phase"] == "confront"

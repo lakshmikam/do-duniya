@@ -66,6 +66,19 @@ def test_unknown_reply_is_available_for_speech_and_translation():
     assert "paperwork" in answer
 
 
+def test_baker_reaction_is_earned_by_questioning_not_inspecting_a_menu_item():
+    code, t = create(case="blue-carbuncle")
+    start(code, t)
+    assert act(code, t, "inspect", target="baker").status_code == 403
+    response = client.post(
+        f"/api/rooms/{code}/ask",
+        headers=headers(t),
+        json={"character": "henry", "topic": "remains"},
+    )
+    assert response.status_code == 200 and response.json()["evidence"] == "baker"
+    assert any(e["id"] == "baker" for e in room(code, t)["evidence"])
+
+
 def test_voice_profiles_send_real_voice_tag_and_numeric_speed(monkeypatch):
     import io, wave, json, httpx
     from test_providers import use_transport
@@ -87,7 +100,7 @@ def test_voice_profiles_send_real_voice_tag_and_numeric_speed(monkeypatch):
     use_transport(monkeypatch, handler)
     code, t = create()
     start(code, t)
-    text = ask(code, t, topic="work").json()["text"]
+    text = ask(code, t, topic="pressure").json()["text"]
     result = client.post(
         f"/api/rooms/{code}/speech",
         headers=headers(t),
