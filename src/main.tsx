@@ -74,6 +74,17 @@ type Character = {
   topics: { id: string; label: string }[];
 };
 type Room = {
+  objective?: {
+    phase: string;
+    text: string;
+    action: {
+      kind: string;
+      target?: string;
+      location?: string;
+      evidence_id?: string;
+    };
+    source_ids: string[];
+  };
   code: string;
   case: Case;
   status: string;
@@ -270,6 +281,166 @@ function Modal({
     </div>
   );
 }
+const storyTranslations = new Map<string, string>();
+function StoryText({
+  text,
+  room,
+  token,
+}: {
+  text: string;
+  room: Room;
+  token: string;
+}) {
+  const key = room.you.language + "|" + text;
+  const [translated, setTranslated] = useState<{
+    key: string;
+    text: string;
+  } | null>(null);
+  useEffect(() => {
+    if (room.you.language === "en" || !room.providers.gemini) return;
+    const cached = storyTranslations.get(key);
+    if (cached) {
+      setTranslated({ key, text: cached });
+      return;
+    }
+    const controller = new AbortController();
+    request(`/rooms/${room.code}/translate`, { text }, token, controller.signal)
+      .then((d) => {
+        if (storyTranslations.size > 200) storyTranslations.clear();
+        storyTranslations.set(key, d.text);
+        setTranslated({ key, text: d.text });
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [key, room.code, room.providers.gemini, token]);
+  return (
+    <span lang={translated?.key === key ? room.you.language : "en"}>
+      {translated?.key === key ? translated.text : text}
+    </span>
+  );
+}
+function Mission({
+  room,
+  token,
+  onFollow,
+  onSwitch,
+}: {
+  room: Room;
+  token: string;
+  onFollow: () => void;
+  onSwitch: () => void;
+}) {
+  const objective = room.objective!;
+  const [localized, setLocalized] = useState<{
+    key: string;
+    text: string;
+  } | null>(null);
+  const key = room.you.language + "|" + objective.text;
+  const labels: Record<string, string[]> = {
+    en: [
+      "Your next lead",
+      "Follow this lead",
+      "Share this clue",
+      "Compare the evidence",
+      "Build your theory",
+      "Switch perspective",
+    ],
+    hi: [
+      "आपका अगला सुराग",
+      "इस सुराग की जाँच करें",
+      "यह सुराग साझा करें",
+      "सबूतों की तुलना करें",
+      "अपना निष्कर्ष बनाएँ",
+      "दूसरा नज़रिया देखें",
+    ],
+    te: [
+      "మీ తదుపరి ఆధారం",
+      "ఈ ఆధారాన్ని అనుసరించండి",
+      "ఈ ఆధారాన్ని పంచుకోండి",
+      "ఆధారాలను పోల్చండి",
+      "మీ నిర్ధారణను రూపొందించండి",
+      "మరో కోణానికి మారండి",
+    ],
+    gu: [
+      "તમારી આગલી કડી",
+      "આ કડી તપાસો",
+      "આ પુરાવો શેર કરો",
+      "પુરાવાની સરખામણી કરો",
+      "તમારું તારણ બનાવો",
+      "બીજો દૃષ્ટિકોણ જુઓ",
+    ],
+  };
+  const l = labels[room.you.language] || labels.en;
+  useEffect(() => {
+    if (room.you.language === "en" || !room.providers.gemini) return;
+    const controller = new AbortController();
+    request(
+      `/rooms/${room.code}/translate`,
+      { text: objective.text },
+      token,
+      controller.signal,
+    )
+      .then((d) => setLocalized({ key, text: d.text }))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [key, room.code, room.providers.gemini, token]);
+  const linked = objective.source_ids
+    .map((id) => room.evidence.find((e) => e.id === id))
+    .filter((e): e is Evidence => !!e);
+  return (
+    <section
+      className={"mission-strip phase-" + objective.phase}
+      aria-label="Current story objective"
+    >
+      <div className="mission-icon">
+        <Compass size={23} />
+      </div>
+      <div className="mission-copy">
+        <span className="eyebrow">
+          {l[0]} · {objective.phase}
+        </span>
+        <p lang={localized?.key === key ? room.you.language : "en"}>
+          {localized?.key === key ? localized.text : objective.text}
+        </p>
+        {linked.length > 0 && (
+          <small className="connected-leads">
+            ↳ {linked.map((e) => e.title).join(" + ")}
+          </small>
+        )}
+      </div>
+      <div className="mission-actions">
+        <button
+          className="primary"
+          disabled={room.status !== "playing"}
+          onClick={onFollow}
+        >
+          {
+            l[
+              objective.action.kind === "share"
+                ? 2
+                : objective.action.kind === "board"
+                  ? 3
+                  : objective.action.kind === "theory"
+                    ? 4
+                    : 1
+            ]
+          }
+          <ArrowRight size={16} />
+        </button>
+        {room.solo && objective.phase === "coordinate" && (
+          <button
+            className="secondary"
+            onClick={onSwitch}
+            disabled={room.status !== "playing"}
+          >
+            {l[5]}
+            <RefreshCw size={14} />
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
 function App() {
   const [cases, setCases] = useState<Case[]>([]),
     [selected, setSelected] = useState(0),
@@ -280,13 +451,14 @@ function App() {
     [openingSeen, setOpeningSeen] = useState("");
   const soundEngine = useRef<GameSound | null>(null),
     clipCache = useRef(new Map<string, Blob>()),
-    voiceElement = useRef<HTMLAudioElement | null>(null),
-    introNarrated = useRef(new Set<string>());
+    voiceElement = useRef<HTMLAudioElement | null>(null);
+  const [ambienceVolume, setAmbienceVolume] = useState(65);
   const [autoVoiceBlocked, setAutoVoiceBlocked] = useState(false);
   async function enableSound() {
     soundEngine.current ??= new GameSound();
     try {
       await soundEngine.current.unlock();
+      soundEngine.current.cue("travel");
       setSoundOn(true);
       setAutoVoiceBlocked(false);
       // Reuse a media element unlocked within this gesture for mobile browsers.
@@ -478,22 +650,14 @@ function App() {
     soundEngine.current?.duck(speaking);
   }, [speaking]);
   useEffect(() => {
-    if (
-      !soundOn ||
-      !room?.providers.timbre ||
-      room.status !== "playing" ||
-      opening
-    )
-      return;
-    const isIntro =
-      !witness && !clue && !introNarrated.current.has(room.code) && !modal;
-    const text = witness
-      ? dialogue
-      : clue?.text || (isIntro ? room.case.brief : "");
+    if (!room || room.status !== "playing" || opening) return;
+    const text = witness ? dialogue : clue?.text || "";
     if (!text) return;
     const t = setTimeout(() => {
-      if (isIntro) introNarrated.current.add(room.code);
-      void listen(text, witness?.id || "", true);
+      if (soundOn && room.providers.timbre)
+        void listen(text, witness?.id || "", true);
+      else if (room.you.language !== "en" && room.providers.gemini)
+        void translate(text);
     }, 180);
     return () => clearTimeout(t);
   }, [
@@ -680,6 +844,16 @@ function App() {
     setVoiceBusy(true);
     setError("");
     try {
+      if (room.you.language !== "en") {
+        const translated = await request(
+          `/rooms/${room.code}/translate`,
+          { text },
+          token,
+          controller.signal,
+        );
+        if (epoch !== viewEpoch.current) return;
+        setTranslation(translated.text);
+      }
       const cacheKey = room.you.language + "|" + character + "|" + text;
       let blob = clipCache.current.get(cacheKey);
       if (!blob) {
@@ -729,7 +903,9 @@ function App() {
         if (automatic) {
           setAutoVoiceBlocked(true);
           setToast(
-            "Voice paused. Tap Replay voice, or continue with subtitles.",
+            (e as Error).name === "NotAllowedError"
+              ? "Tap Replay voice to allow audio in this browser."
+              : "Voice unavailable: " + (e as Error).message,
           );
         } else setError((e as Error).message);
       }
@@ -1201,6 +1377,26 @@ function App() {
           >
             {soundOn ? "♫ Sound on" : "♫ Enable sound"}
           </button>
+          {soundOn && (
+            <label
+              className="ambience-control"
+              title="Background atmosphere volume"
+            >
+              <span>Atmosphere</span>
+              <input
+                aria-label="Background atmosphere volume"
+                type="range"
+                min="0"
+                max="100"
+                value={ambienceVolume}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setAmbienceVolume(v);
+                  soundEngine.current?.setVolume(v / 100);
+                }}
+              />
+            </label>
+          )}
           <span className={"connection " + (connected ? "online" : "")}>
             <i />
             {connected ? "Live room" : "Reconnecting"}
@@ -1486,6 +1682,31 @@ function App() {
               </div>
             </aside>
             <main className="scene-column">
+              {room.objective && (
+                <Mission
+                  room={room}
+                  token={token}
+                  onFollow={() => {
+                    const a = room.objective!.action;
+                    if (a.kind === "share")
+                      void act("share", { target: a.target });
+                    else if (a.kind === "location") {
+                      setLocationId(a.target!);
+                      setWitness(null);
+                      setClue(null);
+                    } else if (a.kind === "character") {
+                      const c = room.characters.find((c) => c.id === a.target);
+                      if (c) {
+                        setLocationId(c.location);
+                        setWitness(c);
+                        setDialogue(c.initial);
+                        setAnswerSource("authored");
+                      }
+                    } else setModal(a.kind === "theory" ? "theory" : "board");
+                  }}
+                  onSwitch={() => void act("switch")}
+                />
+              )}
               <div className="scene-topline">
                 <span>
                   <MapPin size={14} /> {activeLocation?.name}
@@ -1511,7 +1732,15 @@ function App() {
                 <div className="scene-title">
                   <span className="eyebrow">{room.case.eyebrow}</span>
                   <h1>{activeLocation?.name}</h1>
-                  <p>{activeLocation?.description}</p>
+                  <p>
+                    {activeLocation && (
+                      <StoryText
+                        text={activeLocation.description}
+                        room={room}
+                        token={token}
+                      />
+                    )}
+                  </p>
                 </div>
                 <div
                   className="scene-hotspots"
@@ -1858,13 +2087,28 @@ function App() {
             <span className="paper-stamp">
               DO DUNIYA / CASE {room.case.number}
             </span>
-            <p>{shownClue.text}</p>
+            {room.you.language !== "en" && !translation && (
+              <small className="language-status" role="status">
+                {voiceBusy
+                  ? "Translating into " + LANGS[room.you.language] + "…"
+                  : "English original · translation unavailable. Use Read in… to try again."}
+              </small>
+            )}
+            <p lang={translation ? room.you.language : "en"}>
+              {translation || shownClue.text}
+            </p>
+            {translation && (
+              <details>
+                <summary>Original evidence · English</summary>
+                <p>{shownClue.text}</p>
+              </details>
+            )}
           </div>
           {soundControls(shownClue.text)}
           {translation && (
             <div className="translation" lang={room.you.language}>
               <small>GEMINI TRANSLATION · UNREVIEWED</small>
-              <p>{translation}</p>
+              <p>Displayed above · matches the spoken passage.</p>
             </div>
           )}
           <button
@@ -1902,7 +2146,25 @@ function App() {
           </div>
           <div className="speech-bubble" key={dialogue}>
             <span className="speaker-name">{currentWitness.name}</span>
-            <blockquote className="dialogue">{dialogue}</blockquote>
+            {room.you.language !== "en" && !translation && (
+              <small className="language-status" role="status">
+                {voiceBusy
+                  ? "Translating into " + LANGS[room.you.language] + "…"
+                  : "English original · translation unavailable. Use Read in… to try again."}
+              </small>
+            )}
+            <blockquote
+              className="dialogue"
+              lang={translation ? room.you.language : "en"}
+            >
+              {translation || dialogue}
+            </blockquote>
+            {translation && (
+              <details className="original-dialogue">
+                <summary>Original dialogue · English</summary>
+                <p>{dialogue}</p>
+              </details>
+            )}
             <div className={"voice-wave " + (speaking ? "active" : "")}>
               {[1, 2, 3, 4, 5, 6, 7].map((i) => (
                 <i key={i} />
@@ -1938,7 +2200,7 @@ function App() {
           {translation && (
             <div className="translation" lang={room.you.language}>
               <small>GEMINI TRANSLATION · UNREVIEWED</small>
-              <p>{translation}</p>
+              <p>Displayed above · matches the spoken passage.</p>
             </div>
           )}
           <div className="topics">
@@ -1948,7 +2210,7 @@ function App() {
                 key={t.id}
                 onClick={() => ask(t.id)}
               >
-                {t.label}
+                <StoryText text={t.label} room={room} token={token} />
                 <ArrowUpRight size={15} />
               </button>
             ))}
@@ -2070,8 +2332,8 @@ function App() {
             </select>
           </label>
           <p className="smallprint">
-            Use “Read in…” on a passage for on-demand translation. Original
-            English remains visible. Interface labels are currently English.
+            Dialogue and evidence translate automatically. Original English
+            remains visible. Interface labels are currently English.
           </p>
           <div className="provider-list">
             {Object.entries(room.providers).map(([id, enabled]) => (

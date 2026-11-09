@@ -2079,3 +2079,105 @@ h3 {
 .game-paused .scene-hotspot > span:after {
   animation-play-state: paused !important;
 }
+/* The investigation has a continuous thread, even when the players split up. */
+.language-status {
+  display: block;
+  color: #675637;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.mission-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  border: 1px solid #e8c46b66;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #232746, #303650);
+  box-shadow: 0 8px 24px #0002;
+  color: #fff5d9;
+}
+.mission-icon {
+  color: #ffd27b;
+  flex-shrink: 0;
+}
+.mission-copy {
+  flex: 1;
+  min-width: 0;
+}
+.mission-copy .eyebrow {
+  color: #ffd27b;
+}
+.mission-copy p {
+  margin: 7px 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #fff5e3;
+}
+.connected-leads {
+  display: block;
+  color: #b4d9dc;
+  line-height: 1.6;
+}
+.mission-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mission-actions button {
+  white-space: normal;
+  max-width: 190px;
+  font-size: 12px;
+}
+.ambience-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  color: inherit;
+}
+.ambience-control input {
+  width: 85px;
+  accent-color: #c66136;
+  padding: 0;
+}
+.original-dialogue {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #646273;
+  margin-top: 12px;
+}
+.original-dialogue summary,
+.evidence-paper summary {
+  cursor: pointer;
+  text-decoration: underline;
+}
+@media (max-width: 650px) {
+  .mission-strip {
+    flex-wrap: wrap;
+    padding: 14px;
+    gap: 10px;
+  }
+  .mission-icon {
+    display: none;
+  }
+  .mission-copy {
+    flex-basis: 100%;
+  }
+  .mission-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+  .mission-actions button {
+    max-width: none;
+    flex: 1;
+  }
+  .ambience-control span {
+    display: none;
+  }
+  .ambience-control input {
+    width: 65px;
+  }
+}
