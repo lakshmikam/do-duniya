@@ -2181,3 +2181,112 @@ h3 {
     width: 65px;
   }
 }
+.voice-chat {
+  padding: 18px;
+  margin: 20px 0;
+  border: 1px solid #a9c8cb;
+  border-radius: 18px;
+  background: #f0f6f4;
+  color: #243b42;
+}
+.voice-chat.active {
+  background: #1f3045;
+  color: #f3f6ef;
+  border-color: #91c7c9;
+  box-shadow: 0 0 0 4px #8ec6c312;
+}
+.voice-chat-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.voice-chat p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.voice-chat .smallprint {
+  display: block;
+  font-size: 11px;
+  color: inherit;
+  opacity: 0.8;
+  line-height: 1.7;
+  margin-top: 12px;
+}
+.voice-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.voice-chat-actions button {
+  font-size: 13px;
+}
+.voice-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border-left: 2px solid #e8be7b;
+  margin: 12px 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.voice-transcript small {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #e8be7b;
+}
+.mic-level {
+  margin-left: auto;
+  display: block;
+  min-width: 40px;
+  width: 55px;
+  height: 6px;
+  border-radius: 8px;
+  background: #ffffff30;
+  overflow: hidden;
+}
+.mic-level i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #8fddc1;
+  transform-origin: left;
+  transition: transform 0.12s;
+}
+.voice-chat-error {
+  border: 1px solid currentColor;
+  padding: 10px;
+  border-radius: 8px;
+}
+.extra-topics {
+  margin: 14px 0;
+  font-size: 13px;
+}
+.extra-topics summary {
+  cursor: pointer;
+  text-decoration: underline;
+}
+.topics button {
+  line-height: 1.5;
+}
+.pause-preference {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin: 14px 0;
+}
+.pause-preference select {
+  width: auto;
+  max-width: 100%;
+  font-size: 14px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #a9c8cb;
+  background: #fff;
+  color: #243b42;
+}

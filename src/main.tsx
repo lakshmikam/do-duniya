@@ -40,6 +40,8 @@ import "./style.css";
 import { World, GameCharacter } from "./game/World";
 import { Opening } from "./game/Opening";
 import { GameSound } from "./game/sound";
+import { VoiceChat } from "./game/VoiceChat";
+import { speechWav } from "./game/voiceCapture";
 import "./game/game.css";
 
 type Case = {
@@ -66,6 +68,7 @@ type Evidence = {
   shared: boolean;
 };
 type Character = {
+  voice_profile?: { voice: string; tone: string };
   id: string;
   name: string;
   occupation: string;
@@ -454,6 +457,7 @@ function App() {
     voiceElement = useRef<HTMLAudioElement | null>(null);
   const [ambienceVolume, setAmbienceVolume] = useState(65);
   const [autoVoiceBlocked, setAutoVoiceBlocked] = useState(false);
+  const [voiceChatActive, setVoiceChatActive] = useState(false);
   async function enableSound() {
     soundEngine.current ??= new GameSound();
     try {
@@ -463,9 +467,14 @@ function App() {
       setAutoVoiceBlocked(false);
       // Reuse a media element unlocked within this gesture for mobile browsers.
       voiceElement.current ??= new Audio();
-      voiceElement.current.src =
-        "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQIAAAAAAA==";
-      await voiceElement.current.play().catch(() => {});
+      const silentURL = URL.createObjectURL(
+        speechWav(new Float32Array(1600), 16000),
+      );
+      voiceElement.current.src = silentURL;
+      await voiceElement.current
+        .play()
+        .catch(() => {})
+        .finally(() => URL.revokeObjectURL(silentURL));
     } catch {
       setToast("Sound could not start. You can still play with subtitles.");
     }
@@ -493,7 +502,6 @@ function App() {
     [witness, setWitness] = useState<Character | null>(null),
     [dialogue, setDialogue] = useState(""),
     [question, setQuestion] = useState(""),
-    [answerSource, setAnswerSource] = useState("authored"),
     [toast, setToast] = useState(""),
     [now, setNow] = useState(Date.now()),
     [syncAt, setSyncAt] = useState(Date.now()),
@@ -614,7 +622,7 @@ function App() {
     viewEpoch.current++;
     voiceRequest.current?.abort();
     setVoiceBusy(false);
-    setTranslation("");
+    if (!voiceChatActive) setTranslation("");
     audio.current?.pause();
     if (audioURL.current) {
       URL.revokeObjectURL(audioURL.current);
@@ -647,10 +655,11 @@ function App() {
     return () => soundEngine.current?.stopAtmosphere();
   }, [soundOn, room?.status, room?.case.id, opening]);
   useEffect(() => {
-    soundEngine.current?.duck(speaking);
-  }, [speaking]);
+    soundEngine.current?.duck(speaking || voiceChatActive);
+  }, [speaking, voiceChatActive]);
   useEffect(() => {
-    if (!room || room.status !== "playing" || opening) return;
+    if (!room || voiceChatActive || room.status !== "playing" || opening)
+      return;
     const text = witness ? dialogue : clue?.text || "";
     if (!text) return;
     const t = setTimeout(() => {
@@ -794,7 +803,6 @@ function App() {
       );
       if (epoch !== viewEpoch.current) return;
       setDialogue(data.text);
-      setAnswerSource(data.provider);
       setQuestion("");
       if (data.evidence)
         setToast("A new testimony was added to your notebook.");
@@ -1700,7 +1708,6 @@ function App() {
                         setLocationId(c.location);
                         setWitness(c);
                         setDialogue(c.initial);
-                        setAnswerSource("authored");
                       }
                     } else setModal(a.kind === "theory" ? "theory" : "board");
                   }}
@@ -1794,7 +1801,6 @@ function App() {
                           soundEngine.current?.cue("tap");
                           setWitness(c);
                           setDialogue(c.initial);
-                          setAnswerSource("authored");
                           setQuestion("");
                         }}
                       >
@@ -1883,7 +1889,6 @@ function App() {
                         onClick={() => {
                           setWitness(c);
                           setDialogue(c.initial);
-                          setAnswerSource("authored");
                           setQuestion("");
                         }}
                       >
@@ -2141,7 +2146,10 @@ function App() {
             <GameCharacter id={currentWitness.id} talking={speaking} />
             <div>
               <span className="eyebrow">{currentWitness.occupation}</span>
-              <p>Ask about a lead. Present evidence when you have it.</p>
+              <p>
+                {currentWitness.voice_profile?.tone ||
+                  "Ask about a lead. Present evidence when you have it."}
+              </p>
             </div>
           </div>
           <div className="speech-bubble" key={dialogue}>
@@ -2181,9 +2189,7 @@ function App() {
             </div>
           </div>
           <div className="dialogue-source">
-            {answerSource === "authored"
-              ? "AUTHORED STORY DIALOGUE"
-              : "GEMINI TOPIC INTERPRETATION · AUTHORED ANSWER"}
+            WITNESS ACCOUNT · {currentWitness.name}
           </div>
           {!soundOn && (
             <button className="primary full" onClick={() => void enableSound()}>
@@ -2196,91 +2202,153 @@ function App() {
               subtitles remain available.
             </p>
           )}
-          {soundControls(dialogue, currentWitness.id)}
+          {!voiceChatActive && soundControls(dialogue, currentWitness.id)}
+          <VoiceChat
+            key={[
+              room.code,
+              currentWitness.id,
+              room.you.language,
+              room.you.role,
+            ].join("|")}
+            code={room.code}
+            token={token}
+            character={currentWitness.id}
+            name={currentWitness.name}
+            language={room.you.language}
+            enabled={room.status === "playing"}
+            soundEnabled={soundOn}
+            available={
+              room.providers.prisma &&
+              room.providers.timbre &&
+              room.providers.gemini
+            }
+            unlock={enableSound}
+            onActive={(active) => {
+              setVoiceChatActive(active);
+              if (active) {
+                cancelRecording();
+                voiceRequest.current?.abort();
+                audio.current?.pause();
+                setSpeaking(false);
+              }
+            }}
+            onSpeaking={setSpeaking}
+            onReply={(text, translated) => {
+              setDialogue(text);
+              setTranslation(translated);
+            }}
+            onRefresh={() => {
+              request("/rooms/" + room.code, undefined, token)
+                .then(sync)
+                .catch(() => {});
+            }}
+          />
           {translation && (
             <div className="translation" lang={room.you.language}>
               <small>GEMINI TRANSLATION · UNREVIEWED</small>
               <p>Displayed above · matches the spoken passage.</p>
             </div>
           )}
-          <div className="topics">
-            {currentWitness.topics.map((t) => (
-              <button
-                disabled={busy || room.status !== "playing"}
-                key={t.id}
-                onClick={() => ask(t.id)}
-              >
-                <StoryText text={t.label} room={room} token={token} />
-                <ArrowUpRight size={15} />
-              </button>
-            ))}
-          </div>
-          <form
-            className="question-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              ask();
-            }}
-          >
-            <label htmlFor="question">
-              Ask in your own words{" "}
-              <small>Gemini interprets your question</small>
-            </label>
-            <div>
-              <input
-                id="question"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                maxLength={500}
-                placeholder={
-                  room.providers.gemini
-                    ? "What would you like to ask?"
-                    : "Configure Gemini to ask freely; topics above work now."
-                }
-              />
-              <button
-                type="button"
-                className={"icon mic " + (recording ? "recording" : "")}
-                disabled={
-                  voiceBusy ||
-                  !room.providers.prisma ||
-                  room.status !== "playing"
-                }
-                onClick={record}
-                aria-label={
-                  recording ? "Stop recording" : "Record a question with Prisma"
-                }
-              >
-                {recording ? <Square size={18} /> : <Mic size={18} />}
-              </button>
-              <button
-                className="icon send"
-                disabled={
-                  busy ||
-                  voiceBusy ||
-                  !question.trim() ||
-                  !room.providers.gemini ||
-                  room.status !== "playing"
-                }
-                aria-label="Ask witness"
-              >
-                {busy ? (
-                  <LoaderCircle className="spin" size={18} />
-                ) : (
-                  <Send size={18} />
-                )}
-              </button>
+          <div hidden={voiceChatActive}>
+            <div className="topics">
+              {currentWitness.topics.slice(0, 3).map((t) => (
+                <button
+                  disabled={busy || room.status !== "playing"}
+                  key={t.id}
+                  onClick={() => ask(t.id)}
+                >
+                  <StoryText text={t.label} room={room} token={token} />
+                  <ArrowUpRight size={15} />
+                </button>
+              ))}
             </div>
-            {recording && (
-              <span className="record-label">
-                Recording {recordSeconds}s / 20s · click stop to transcribe
-              </span>
+            {currentWitness.topics.length > 3 && (
+              <details className="extra-topics">
+                <summary>
+                  More things to ask about ({currentWitness.topics.length - 3})
+                </summary>
+                <div className="topics">
+                  {currentWitness.topics.slice(3).map((t) => (
+                    <button
+                      key={t.id}
+                      disabled={busy || room.status !== "playing"}
+                      onClick={() => ask(t.id)}
+                    >
+                      {t.label}
+                      <ArrowUpRight size={15} />
+                    </button>
+                  ))}
+                </div>
+              </details>
             )}
-            <p className="smallprint">
-              Review a voice transcript before sending. Unrelated questions
-              won’t invent new story facts.
-            </p>
-          </form>
+            <form
+              className="question-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                ask();
+              }}
+            >
+              <label htmlFor="question">
+                Ask in your own words <small>Follow up on their account</small>
+              </label>
+              <div>
+                <input
+                  id="question"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  maxLength={500}
+                  placeholder={
+                    room.providers.gemini
+                      ? "What would you like to ask?"
+                      : "Configure Gemini to ask freely; topics above work now."
+                  }
+                />
+                <button
+                  type="button"
+                  className={"icon mic " + (recording ? "recording" : "")}
+                  disabled={
+                    voiceBusy ||
+                    !room.providers.prisma ||
+                    room.status !== "playing"
+                  }
+                  onClick={record}
+                  aria-label={
+                    recording
+                      ? "Stop recording"
+                      : "Record a question with Prisma"
+                  }
+                >
+                  {recording ? <Square size={18} /> : <Mic size={18} />}
+                </button>
+                <button
+                  className="icon send"
+                  disabled={
+                    busy ||
+                    voiceBusy ||
+                    !question.trim() ||
+                    !room.providers.gemini ||
+                    room.status !== "playing"
+                  }
+                  aria-label="Ask witness"
+                >
+                  {busy ? (
+                    <LoaderCircle className="spin" size={18} />
+                  ) : (
+                    <Send size={18} />
+                  )}
+                </button>
+              </div>
+              {recording && (
+                <span className="record-label">
+                  Recording {recordSeconds}s / 20s · click stop to transcribe
+                </span>
+              )}
+              <p className="smallprint">
+                Review a voice transcript before sending. Unrelated questions
+                won’t invent new story facts.
+              </p>
+            </form>
+          </div>
         </Modal>
       )}
       {modal === "brief" && (
