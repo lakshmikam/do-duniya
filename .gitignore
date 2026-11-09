@@ -1,0 +1,13 @@
+node_modules/
+dist/
+__pycache__/
+.pytest_cache/
+.env
+.env.*
+!.env.example
+runtime/
+*.pyc
+outputs/*.json
+*.zip
+*.tar.gz
+.local-tools/
