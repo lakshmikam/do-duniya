@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Do Duniya — phone layout preview</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #e7e9df;
+        color: #233c36;
+        font:
+          14px system-ui,
+          sans-serif;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        padding: 25px;
+        gap: 17px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        max-width: 700px;
+      }
+      h1 {
+        font:
+          24px Georgia,
+          serif;
+        margin: 0;
+      }
+      p {
+        font-size: 11px;
+        line-height: 1.6;
+        margin: 0;
+        color: #677462;
+      }
+      a {
+        color: inherit;
+      }
+      iframe {
+        width: 390px;
+        height: 844px;
+        max-width: 100%;
+        border: 1px solid #a8b49c;
+        border-radius: 22px;
+        background: #f4f2e9;
+        box-shadow: 0 12px 40px #263e3022;
+      }
+      button {
+        border: 1px solid #b3bda9;
+        background: transparent;
+        color: inherit;
+        padding: 9px 13px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      @media (max-width: 440px) {
+        body {
+          padding: 12px;
+        }
+        header {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        iframe {
+          width: 100%;
+          height: calc(100dvh - 130px);
+          border-radius: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Do Duniya · phone preview</h1>
+        <p>
+          A real 390px browser frame for checking the responsive layout.<br />Microphone
+          permissions and device performance still need a real phone.
+        </p>
+      </div>
+      <a href="/">Open full game ↗</a>
+    </header>
+    <iframe title="Phone preview" src="/" allow="microphone"></iframe>
+  </body>
+</html>
