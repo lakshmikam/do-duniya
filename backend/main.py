@@ -105,6 +105,14 @@ def member(code, token):
     )
     if not p:
         fail("Your investigator pass is not valid for this room.", 403)
+    # Upgrade existing rooms to the automatic team notebook without inventing clues.
+    found = [
+        id for ids in r["discoveries"].values() for id in ids if id not in r["shared"]
+    ]
+    if found:
+        r["shared"].extend(dict.fromkeys(found))
+        r["revision"] += 1
+        save(r)
     return r, p
 
 
@@ -192,6 +200,12 @@ def view(r, p):
     ]
     return {
         "objective": next_objective(c, r, p),
+        "can_solve": any(
+            set(route) <= set(r["shared"])
+            for route in c["solution"].get(
+                "support_routes", [c["solution"]["required"]]
+            )
+        ),
         "code": r["code"],
         "case": next(x for x in catalog() if x["id"] == c["id"]),
         "status": r["status"],
@@ -268,8 +282,23 @@ def event(r, text):
 def discover(r, p, id):
     if id not in r["discoveries"][p["role"]]:
         r["discoveries"][p["role"]].append(id)
-        # Do not broadcast private clue titles before sharing.
-        event(r, f"{p['name']} discovered a new lead.")
+    if id not in r["shared"]:
+        r["shared"].append(id)
+        e = next(e for e in case(r)["evidence"] if e["id"] == id)
+        event(r, f"{p['name']} added {e['title']} to your team notebook.")
+        r.setdefault("messages", []).append(
+            {
+                "id": secrets.token_hex(5),
+                "author": p["name"],
+                "author_id": p["id"],
+                "text": e["title"],
+                "evidence_id": id,
+                "kind": "clue",
+                "prompt": handoff_prompt(id),
+                "time": time.time(),
+            }
+        )
+        r["messages"] = r["messages"][-40:]
 
 
 async def publish(r):
@@ -468,34 +497,16 @@ async def action(code: str, body: Action, authorization: str = Header(default=""
             if r["status"] != "playing":
                 fail("Resume the investigation before taking an action.", 409)
             if body.kind == "assist":
+                # Compatibility for already-open older clients; no extra gate step.
                 if (
                     c["id"] != "last-announcement"
                     or p["role"] != "archive"
                     or body.target != "service_gate"
                 ):
-                    fail("That control belongs to the records investigator.", 403)
+                    fail("That control is not available.", 403)
                 if "route" not in r["shared"]:
-                    fail(
-                        "Find and share the service route before powering the gate.",
-                        409,
-                    )
-                if not r.setdefault("cooperation", {}).get("service_gate"):
-                    r["cooperation"]["service_gate"] = True
-                    event(
-                        r,
-                        f"{p['name']} powered the service gate. The field investigator can now reach the store latch.",
-                    )
-                    r.setdefault("messages", []).append(
-                        {
-                            "id": secrets.token_hex(5),
-                            "author": p["name"],
-                            "author_id": p["id"],
-                            "kind": "message",
-                            "text": "Service gate powered. Follow the passage and release the store latch from your side.",
-                            "time": time.time(),
-                        }
-                    )
-                    r["messages"] = r["messages"][-40:]
+                    fail("Find the store route first.", 409)
+                r.setdefault("cooperation", {})["service_gate"] = True
             elif body.kind == "inspect":
                 e = next((e for e in c["evidence"] if e["id"] == body.target), None)
                 if (
@@ -509,17 +520,7 @@ async def action(code: str, body: Action, authorization: str = Header(default=""
                 if not unlocked(r, p, location):
                     fail("Follow the earlier lead to reach this location.", 409)
                 if c["id"] == "last-announcement" and e["id"] == "found":
-                    if not r.get("cooperation", {}).get("service_gate"):
-                        fail(
-                            "Ask your records partner to power the service gate at the signal cabin. Then release the store latch from the passage.",
-                            409,
-                        )
-                    if not r["cooperation"].get("store_latch"):
-                        r["cooperation"]["store_latch"] = True
-                        event(
-                            r,
-                            f"{p['name']} released the store latch. Both perspectives opened the passage together.",
-                        )
+                    r.setdefault("cooperation", {})["store_latch"] = True
                 discover(r, p, e["id"])
             elif body.kind == "share":
                 if body.target not in known(r, p):
@@ -581,6 +582,11 @@ async def action(code: str, body: Action, authorization: str = Header(default=""
                 r["hint"] = c["hints"][idx]
                 r["hint_index"] += 1
             elif body.kind == "propose":
+                if r["proposal"]:
+                    fail(
+                        "Your team already has answers waiting for review. Check them or choose Revise first.",
+                        409,
+                    )
                 if body.answers.get("culprit") not in {x["id"] for x in c["suspects"]}:
                     fail("Choose a suspect.")
                 for q in c["questions"]:
@@ -1013,7 +1019,18 @@ def accessible_texts(r, p):
             texts.update(a["text"] for a in allowed_responses(r, p, ch))
     if r.get("hint"):
         texts.add(r["hint"])
-    texts.add(next_objective(case(r), r, p)["text"])
+    guidance = next_objective(case(r), r, p)
+    texts.update(
+        guidance[key]
+        for key in [
+            "text",
+            "communication",
+            "partner_task",
+            "team_question",
+            "chapter_title",
+        ]
+    )
+    texts.add(guidance["action"]["label"])
     if r.get("result"):
         texts.add(r["result"]["reveal"])
     return texts

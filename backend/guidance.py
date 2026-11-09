@@ -1,282 +1,254 @@
-"""Spoiler-bounded next actions derived only from discoveries visible to a player."""
+"""Plain, role-specific tasks and concrete reasons to talk to the other player."""
 
 
 def handoff_prompt(evidence_id):
     return {
-        "route": "Use this shared route to reach the relay passage.",
-        "broadcast": "Compare this record with what witnesses say they heard.",
-        "access": "Compare who held the key with the witness accounts.",
-        "docket": "Check whether this matches the claimed overnight pickup.",
-        "note": "Help follow the route Arun describes.",
-        "seal": "Compare this with the authorized pickup paperwork.",
-        "found": "Compare Arun’s account with the access and pickup records.",
-        "admission": "Check this account against our shared records before reconstructing.",
-        "alpha": "Follow this lead from the inn to the market.",
-        "ryder": "Compare this hotel role with the returning visitor.",
-        "twins": "Compare this with the description of the bird.",
-        "stone": "Help connect the recovered jewel to the hotel.",
-        "visitor": "Check this visitor against the hotel records.",
-        "supplier": "Follow this supply trail to Brixton Road.",
-    }.get(evidence_id, "Compare this clue with what you have found on your side.")
+        "seal": "Was anyone authorized to collect the crate tonight?",
+        "broadcast": "Does this match what the witnesses heard?",
+        "note": "Can you find the route to the store?",
+        "route": "Follow this route and check the store door.",
+        "access": "Ask Dev why his name is in the key register.",
+        "docket": "Does the approved pickup time match Dev’s account?",
+        "found": "Compare Arun’s account with the key and pickup records.",
+        "admission": "Do the records support this account? Decide together.",
+        "stone": "Can you connect this jewel to the hotel case?",
+        "baker": "Where did the Alpha Inn buy its geese?",
+        "alpha": "Follow the inn’s supplier to the market.",
+        "supplier": "Follow this supplier to Brixton Road.",
+        "visitor": "Does this visitor appear in the hotel records?",
+        "ryder": "Compare this hotel role with the visitor at the market.",
+        "twins": "Could someone have taken the wrong bird?",
+    }.get(evidence_id, "What does this change about our explanation?")
 
 
 def next_objective(c, r, p):
-    own = r["discoveries"][p["role"]]
-    shared = set(r["shared"])
-    known = set(own) | shared
+    known = set(r["shared"])
+    role = p["role"]
+    routes = c["solution"].get("support_routes", [c["solution"]["required"]])
+    ready = any(set(route) <= known for route in routes)
 
-    def locate(id):
+    def find(id, text, communication):
         e = next(e for e in c["evidence"] if e["id"] == id)
-        return {
-            "kind": "location",
-            "target": e["location"],
-            "evidence_id": id,
-            "title": e["title"],
-        }
+        return dict(
+            phase="investigate",
+            text=text,
+            communication=communication,
+            action=dict(
+                kind="location",
+                target=e["location"],
+                evidence_id=id,
+                label="Open: " + e["title"],
+            ),
+            source_ids=[],
+        )
 
-    pending = [id for id in own if id not in shared]
-    if pending:
-        e = next(e for e in c["evidence"] if e["id"] == pending[-1])
-        return {
-            "phase": "share",
-            "text": f'You found “{e["title"]}”. Share it so your partner can connect it to their side of the case.',
-            "action": {"kind": "share", "target": e["id"]},
-            "source_ids": [e["id"]],
-        }
-    if c["id"] == "last-announcement":
-        if p["role"] == "archive":
-            if "route" in shared and not r.get("cooperation", {}).get("service_gate"):
-                return {
-                    "phase": "assist",
-                    "text": "Your partner has the route. Power the service gate from the signal cabin. They must reach the passage and release the store latch physically from their side.",
-                    "action": {
-                        "kind": "assist",
-                        "target": "service_gate",
-                        "location": "console",
-                    },
-                    "source_ids": ["route"],
-                }
-            sequence = [
-                (
-                    "broadcast",
-                    "Start with the broadcast log. Was this a live warning, or a recording?",
-                ),
-                (
-                    "access",
-                    "Now trace access to the broadcast cupboard. Who could play that recording?",
-                ),
-                (
-                    "docket",
-                    "Compare the evacuation with the collection paperwork. Was anyone authorized to remove the crate?",
-                ),
-                (
-                    "route",
-                    "Find the service route and share it. Your field partner needs a way to follow the trolley.",
-                ),
-            ]
-            for id, text in sequence:
-                if id not in known:
-                    return {
-                        "phase": "investigate",
-                        "text": text,
-                        "action": locate(id),
-                        "source_ids": [],
-                    }
-            if not r.get("cooperation", {}).get("service_gate"):
-                return {
-                    "phase": "assist",
-                    "text": "Your partner has the service route. Power the electric service gate from the signal cabin so they can reach the passage. They must release the store latch physically from their side.",
-                    "action": {
-                        "kind": "assist",
-                        "target": "service_gate",
-                        "location": "console",
-                    },
-                    "source_ids": ["route"],
-                }
-            text = "Your records are shared and the service gate is powered. Ask your partner what they found in the relay passage; compare that account with the key and collection records."
-            if "admission" not in known:
-                return {
-                    "phase": "coordinate",
-                    "text": text,
-                    "action": {"kind": "board"},
-                    "source_ids": [
-                        id
-                        for id in ["broadcast", "access", "docket", "route"]
-                        if id in known
-                    ],
-                }
-        else:
-            sequence = [
-                (
+    def talk(id, topic, text, communication, sources=()):
+        ch = next(ch for ch in c["characters"] if ch["id"] == id)
+        return dict(
+            phase="investigate",
+            text=text,
+            communication=communication,
+            action=dict(
+                kind="character",
+                target=id,
+                location=ch["location"],
+                topic=topic,
+                label="Talk to " + ch["name"],
+            ),
+            source_ids=list(sources),
+        )
+
+    def ask(text, communication, sources=()):
+        return dict(
+            phase="coordinate",
+            text=text,
+            communication=communication,
+            action=dict(kind="partner", label="Ask your partner"),
+            source_ids=list(sources),
+        )
+
+    def task(who):
+        if ready:
+            return dict(
+                phase="reconstruct",
+                text="You have enough clues. Agree who did it, how it happened, and what the records prove.",
+                communication="What explanation fits all the clues in our notebook?",
+                action=dict(kind="theory", label="Solve the case together"),
+                source_ids=[],
+            )
+        if c["id"] == "last-announcement":
+            if who == "archive":
+                for id, text, message in [
+                    (
+                        "broadcast",
+                        "Read the announcement log. Check whether control sent a live warning.",
+                        "I’m checking the announcement. What did the people on the platform hear?",
+                    ),
+                    (
+                        "route",
+                        "Find the service route. Your partner needs it to look for Arun.",
+                        "The announcement log is in our notebook. I’m finding the way to the store.",
+                    ),
+                    (
+                        "access",
+                        "Read the key register. Find who could use the announcement equipment.",
+                        "The store route is in our notebook. Can you go there while I check the keys?",
+                    ),
+                    (
+                        "docket",
+                        "Read the pickup approval. Check when the crate was meant to leave.",
+                        "Who says the crate was being collected tonight? I’m checking the approved time.",
+                    ),
+                ]:
+                    if id not in known:
+                        return find(id, text, message)
+                return ask(
+                    "Your records are complete. Your partner is checking the store; ask what they found.",
+                    "I checked the log, keys and pickup time. What did you find in the store?",
+                    ("route", "access", "docket"),
+                )
+            if "seal" not in known:
+                return find(
                     "seal",
-                    "Inspect the crate seal. Did the storm open it, or did someone cut it?",
-                ),
-                (
+                    "Check the crate’s broken seal on the platform.",
+                    "I’m checking the crate. Can you read the announcement log?",
+                )
+            if "note" not in known:
+                return find(
                     "note",
-                    "Check the station office for a trace of Arun’s last movements.",
-                ),
-            ]
-            for id, text in sequence:
-                if id not in known:
-                    return {
-                        "phase": "investigate",
-                        "text": text,
-                        "action": locate(id),
-                        "source_ids": [],
-                    }
+                    "Open Arun’s note in the station office. Find where he was heading.",
+                    "The seal was cut. Does your log say the warning was genuine?",
+                )
             if "route" not in known:
-                return {
-                    "phase": "coordinate",
-                    "text": "Arun followed someone into the service passage. Ask your records partner to find and share the service route. You can inspect Leela’s receipt while they search.",
-                    "action": locate("receipt"),
-                    "source_ids": ["note"],
-                }
+                return ask(
+                    "Your partner must find the store route in the records. Ask for it here.",
+                    "Arun’s note points to the service passage. Can you find the store route?",
+                    ("note",),
+                )
             if "found" not in known:
-                if not r.get("cooperation", {}).get("service_gate"):
-                    return {
-                        "phase": "coordinate",
-                        "text": "The shared route reaches an electric service gate. Ask your records partner to power it from the signal cabin. Then enter the passage and release the separate store latch yourself.",
-                        "action": {
-                            "kind": "partner",
-                            "target": "service_gate",
-                            "location": "relay",
-                        },
-                        "source_ids": ["route"],
-                    }
-                return {
-                    "phase": "follow",
-                    "text": "Your partner found a route. Follow it to the relay passage and investigate the voice behind the door.",
-                    "action": locate("found"),
-                    "source_ids": ["route"],
-                }
-            if {"access", "docket"} <= known and "admission" not in known:
-                return {
-                    "phase": "confront",
-                    "text": "Arun’s account and the records now overlap. Return to Dev and present the key register together with the collection docket.",
-                    "action": {
-                        "kind": "character",
-                        "target": "dev",
-                        "location": "platform",
-                    },
-                    "source_ids": ["found", "access", "docket"],
-                }
-            if not {"access", "docket"} <= known:
-                return {
-                    "phase": "coordinate",
-                    "text": "You found Arun. Ask your partner to share the key register and collection docket before confronting the account you were given.",
-                    "action": {"kind": "board"},
-                    "source_ids": ["found"],
-                }
-            text = "You have the witness account and the records. Compare them together, then build a reconstruction supported by shared evidence."
-    else:
-        if p["role"] == "archive":
-            sequence = [
+                return find(
+                    "found",
+                    "Your partner found the route. Open the store door in the relay passage.",
+                    "I have the store route. I’m following it now—check who had the keys.",
+                )
+            missing = [id for id in ["access", "docket"] if id not in known]
+            if missing:
+                return ask(
+                    "You found Arun. Your partner still needs to check the key register and pickup approval.",
+                    "Arun’s account is in our notebook. Can you check the keys and approved pickup time?",
+                    ("found",),
+                )
+            return talk(
+                "dev",
+                "confront",
+                "Ask Dev to explain the key register and pickup approval.",
+                "The accounts do not line up. What should we ask Dev?",
+                ("found", "access", "docket"),
+            )
+        if who == "archive":
+            for id, text, message in [
                 (
                     "alpha",
-                    "Trace the Alpha Inn’s account. Your city partner needs the name of the market supplier.",
+                    "Read the Alpha Inn account. Find who supplied its geese.",
+                    "I’m checking the inn’s supplier. What did you find with Baker?",
                 ),
-                ("arrest", "Read exactly what supports the accusation against Horner."),
                 (
                     "ryder",
-                    "Check who had access at the hotel. Share that person’s role, not just your suspicion.",
-                ),
-                ("cusack", "Separate what Cusack saw from what she only heard."),
-            ]
-            for id, text in sequence:
-                if id not in known:
-                    return {
-                        "phase": "investigate",
-                        "text": text,
-                        "action": locate(id),
-                        "source_ids": [],
-                    }
-            text = "Your dossier is shared. Ask your partner who is trying to recover the bird, and compare that identity with the hotel witness."
-            if "confession" not in known:
-                return {
-                    "phase": "coordinate",
-                    "text": text,
-                    "action": {"kind": "board"},
-                    "source_ids": [id for id in ["alpha", "ryder"] if id in known],
-                }
-        else:
-            if "stone" not in known:
-                return {
-                    "phase": "investigate",
-                    "text": "Examine the recovered jewel. This is the link between a Christmas dinner and the hotel theft.",
-                    "action": locate("stone"),
-                    "source_ids": [],
-                }
-            if "baker" not in known:
-                return {
-                    "phase": "investigate",
-                    "text": "See whether Baker wants his original goose back, or would accept a replacement. What does his reaction suggest?",
-                    "action": {
-                        "kind": "character",
-                        "target": "henry",
-                        "location": "street",
-                        "topic": "remains",
-                    },
-                    "source_ids": ["stone"],
-                }
-            if "alpha" not in known:
-                return {
-                    "phase": "coordinate",
-                    "text": "Baker names the Alpha Inn. Ask your records partner to share the inn’s supplier account so you can follow the bird.",
-                    "action": {"kind": "board"},
-                    "source_ids": ["baker"],
-                }
-            for id, text in [
-                (
-                    "supplier",
-                    "The inn account opens the market trail. Find Breckinridge’s supplier.",
+                    "Read the hotel attendant’s record. Check who had access to the room.",
+                    "The market route is in our notebook. Who keeps asking about a particular bird?",
                 ),
                 (
-                    "visitor",
-                    "Find out why the returning visitor wants one particular bird.",
-                ),
-                (
-                    "twins",
-                    "Follow the supplier record to Brixton Road. Ask what made these birds easy to confuse.",
+                    "arrest",
+                    "Read why Horner was accused. Separate the accusation from proof.",
+                    "The hotel record names the people with access. Does that match your visitor?",
                 ),
             ]:
                 if id not in known:
-                    return {
-                        "phase": "follow",
-                        "text": text,
-                        "action": (
-                            {
-                                "kind": "character",
-                                "target": "dealer",
-                                "location": "market",
-                                "topic": "visitor",
-                            }
-                            if id == "visitor"
-                            else locate(id)
-                        ),
-                        "source_ids": [x for x in ["alpha", "supplier"] if x in known],
-                    }
-            if "ryder" not in known:
-                return {
-                    "phase": "coordinate",
-                    "text": "You know the visitor’s name. Ask your records partner to share his connection to the hotel.",
-                    "action": {"kind": "board"},
-                    "source_ids": ["visitor"],
-                }
-            if "confession" not in known:
-                return {
-                    "phase": "confront",
-                    "text": "The two trails meet. Present the recovered stone, supplier record and hotel dossier to Ryder.",
-                    "action": {
-                        "kind": "character",
-                        "target": "james",
-                        "location": "market",
-                    },
-                    "source_ids": ["stone", "supplier", "ryder"],
-                }
-            text = "The bird trail and hotel account connect. Agree which facts clear the accused man, and support your final explanation."
-    return {
-        "phase": "reconstruct",
-        "text": text,
-        "action": {"kind": "theory"},
-        "source_ids": [id for id in shared if id in known][:5],
-    }
+                    return find(id, text, message)
+            return ask(
+                "Your partner is following the bird. Ask what the supplier and visitor revealed.",
+                "What does the bird trail tell us about the hotel theft?",
+                ("ryder",),
+            )
+        if "stone" not in known:
+            return find(
+                "stone",
+                "Examine the jewel recovered from the goose.",
+                "I’m checking the recovered jewel. Can you read the hotel case?",
+            )
+        if "baker" not in known:
+            return talk(
+                "henry",
+                "remains",
+                "Ask Baker whether he wants his original bird back or a replacement.",
+                "I’m asking Baker about his bird. Can you trace the Alpha Inn’s supplier?",
+                ("stone",),
+            )
+        if "alpha" not in known:
+            return ask(
+                "Your partner must find the inn’s supplier. Ask for the market lead.",
+                "Baker got the bird from the Alpha Inn. Who supplied the inn?",
+                ("baker",),
+            )
+        if "supplier" not in known:
+            return find(
+                "supplier",
+                "Open the dealer’s supplier record at the market.",
+                "I’m at the market. Can you check the hotel attendant’s name?",
+            )
+        if "visitor" not in known:
+            return talk(
+                "dealer",
+                "visitor",
+                "Ask the dealer about the visitor looking for one particular goose.",
+                "Does the name of the hotel attendant match the returning visitor?",
+                ("supplier",),
+            )
+        if "twins" not in known:
+            return find(
+                "twins",
+                "Follow the supplier to Brixton Road. Check what made the birds easy to confuse.",
+                "I’m checking the birds at Brixton Road. Compare the visitor with the hotel record.",
+            )
+        if "ryder" not in known:
+            return ask(
+                "Your partner must check the visitor’s hotel connection.",
+                "The visitor’s name is in our notebook. Does he appear in the hotel records?",
+                ("visitor",),
+            )
+        return talk(
+            "james",
+            "confront",
+            "Ask Ryder to explain the jewel, supplier record and his hotel role.",
+            "Does this chain of clues support the original accusation?",
+            ("stone", "supplier", "ryder"),
+        )
+
+    mine, theirs = task(role), task("archive" if role == "field" else "field")
+    if ready:
+        chapter, title, question = (
+            3,
+            "Decide together",
+            "What explanation fits the clues?",
+        )
+    elif c["id"] == "last-announcement":
+        chapter = 2 if {"route", "note"} <= known else 1
+        title = "Find Arun" if chapter == 2 else "Check the warning"
+        question = (
+            "Where did Arun go?" if chapter == 2 else "Was the evacuation genuine?"
+        )
+    else:
+        chapter = 2 if {"alpha", "stone", "baker"} <= known else 1
+        title = "Follow the bird" if chapter == 2 else "Connect the two cases"
+        question = (
+            "Who wanted that particular goose?"
+            if chapter == 2
+            else "How are the jewel and the goose connected?"
+        )
+    return mine | dict(
+        chapter=chapter,
+        chapter_title=title,
+        team_question=question,
+        partner_task=theirs["text"],
+        ready=ready,
+    )

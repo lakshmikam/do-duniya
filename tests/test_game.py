@@ -67,19 +67,17 @@ def test_two_players_and_no_third():
     assert act(code, token, "start").status_code == 200
 
 
-def test_private_clue_not_leaked_to_other_role():
+def test_only_discovered_clues_appear_automatically_in_both_notebooks():
     code, a = create(solo=False)
     d = client.post("/api/join", json={"code": code, "name": "B"}).json()
     b = d["token"]
     act(code, a, "ready")
     act(code, b, "ready")
     act(code, a, "start")
+    assert "Someone is moving the museum crate" not in str(room(code, b))
     act(code, a, "inspect", target="note")
-    v = room(code, b)
-    assert "Arun’s unfinished note" not in str(v)
-    assert "Someone is moving the museum crate" not in str(v)
-    act(code, a, "share", target="note")
     assert "Someone is moving the museum crate" in str(room(code, b))
+    assert "All right. I played the old drill" not in str(room(code, b))
 
 
 def test_cannot_inspect_other_role_or_hidden_testimony():

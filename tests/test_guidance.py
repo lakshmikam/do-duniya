@@ -1,59 +1,52 @@
-"""Story continuity without leaking the other player's undiscovered evidence."""
+"""Every task names a next action and a concrete reason to talk to the teammate."""
 
-from test_game import create, start, act, room, inspect_share, client, headers
+from test_game import create, start, act, room, client, headers
+from backend import main as game
 
 
-def test_train_lead_changes_on_discovery_share_and_partner_route():
+def test_first_tasks_explain_both_roles_and_what_to_communicate():
     code, t = create()
     start(code, t)
-    assert room(code, t)["objective"]["action"]["evidence_id"] == "seal"
+    task = room(code, t)["objective"]
+    assert task["action"]["evidence_id"] == "seal"
+    assert "announcement log" in task["partner_task"]
+    assert "announcement log" in task["communication"]
+    assert (
+        task["chapter"] == 1 and task["team_question"] == "Was the evacuation genuine?"
+    )
+    assert task["action"]["label"]
+
+
+def test_discovering_a_clue_immediately_advances_task_without_a_share_step():
+    code, t = create()
+    start(code, t)
     act(code, t, "inspect", target="seal")
-    guide = room(code, t)["objective"]
-    assert guide["phase"] == "share" and guide["source_ids"] == ["seal"]
-    act(code, t, "share", target="seal")
-    assert room(code, t)["objective"]["action"]["evidence_id"] == "note"
-    inspect_share(code, t, "note")
-    assert room(code, t)["objective"]["phase"] == "coordinate"
-    act(code, t, "switch")
-    inspect_share(code, t, "route")
-    act(code, t, "assist", target="service_gate")
-    act(code, t, "switch")
-    guide = room(code, t)["objective"]
-    assert guide["phase"] == "follow" and guide["action"]["evidence_id"] == "found"
-    assert guide["source_ids"] == ["route"]
+    state = room(code, t)
+    assert state["objective"]["action"]["evidence_id"] == "note"
+    assert state["evidence"][0]["shared"]
+    assert state["shared_count"] == 1
+    assert state["messages"][-1]["evidence_id"] == "seal"
 
 
-def test_both_cases_guidance_sources_are_visible_and_targets_accessible():
+def test_both_guided_roles_reach_a_solvable_case_without_power_or_share_actions():
     for case in ["last-announcement", "blue-carbuncle"]:
         code, t = create(case)
         start(code, t)
-        # Walk the suggested leads across both perspectives. Confrontations
-        # remain deliberate player actions; no solution is proposed for them.
-        for _ in range(32):
-            v = room(code, t)
-            g = v["objective"]
+        actions = []
+        for _ in range(30):
+            state = room(code, t)
+            g = state["objective"]
             a = g["action"]
-            assert set(g["source_ids"]) <= {e["id"] for e in v["evidence"]}
-            assert not {"answers", "solution", "culprit"} & set(g)
-            if a["kind"] == "share":
-                assert act(code, t, "share", target=a["target"]).status_code == 200
-            elif a["kind"] == "location":
-                assert any(
-                    l["id"] == a["target"] and not l["locked"] for l in v["locations"]
-                )
+            assert g["communication"] and g["partner_task"] and a["label"]
+            assert set(g["source_ids"]) <= {e["id"] for e in state["evidence"]}
+            assert a["kind"] not in ["share", "assist"]
+            if a["kind"] == "theory":
+                break
+            if a["kind"] == "location":
                 assert (
                     act(code, t, "inspect", target=a["evidence_id"]).status_code == 200
                 )
-                if g["phase"] == "coordinate":
-                    act(code, t, "switch")
-            elif g["phase"] == "coordinate":
-                act(code, t, "switch")
-            elif a["kind"] == "assist":
-                assert act(code, t, "assist", target=a["target"]).status_code == 200
             elif a["kind"] == "character":
-                assert any(c["id"] == a["target"] for c in v["characters"])
-                if g["phase"] == "confront":
-                    break
                 assert (
                     client.post(
                         f"/api/rooms/{code}/ask",
@@ -62,6 +55,10 @@ def test_both_cases_guidance_sources_are_visible_and_targets_accessible():
                     ).status_code
                     == 200
                 )
+            elif a["kind"] == "partner":
+                act(code, t, "switch")
             else:
-                break
-        assert g["phase"] == "confront"
+                raise AssertionError(a)
+            actions.append(a["kind"])
+        assert state["can_solve"] and g["ready"] and g["chapter"] == 3
+        assert len(actions) < 20

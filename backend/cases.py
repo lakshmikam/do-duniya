@@ -33,11 +33,11 @@ TRAIN = {
     "source": None,
     "roles": {
         "field": {
-            "name": "On the ground",
+            "name": "Station investigator",
             "subtitle": "Walk the platform. Question the witnesses.",
         },
         "archive": {
-            "name": "Behind the records",
+            "name": "Records investigator",
             "subtitle": "Read the logs. Find what doesn’t fit.",
         },
     },
@@ -65,7 +65,7 @@ TRAIN = {
             "id": "console",
             "name": "Broadcast console",
             "role": "archive",
-            "description": "The broadcast log records a local playback at 23:47. No emergency dispatch accompanied it.",
+            "description": "The loudspeaker has fallen silent. The announcement log and key register lie beside the console. Check them against what the witnesses heard.",
         },
         {
             "id": "records",
@@ -130,7 +130,7 @@ TRAIN = {
         clue(
             "route",
             "The service route",
-            "The electric service gate leads to the old relay store and then the west loading bay. The signal cabin supplies power to that gate. The separate store latch can only be released physically from the passage. Share this route with your field partner.",
+            "Follow the service passage to the old relay store, then the west loading bay. The store latch opens from the passage. Your partner can follow this route to check the locked door.",
             "archive",
             "records",
         ),
@@ -295,11 +295,11 @@ BLUE = {
     "source": "https://www.gutenberg.org/ebooks/1661",
     "roles": {
         "field": {
-            "name": "Across the city",
+            "name": "Street investigator",
             "subtitle": "Follow the goose through London.",
         },
         "archive": {
-            "name": "At Baker Street",
+            "name": "Records investigator",
             "subtitle": "Examine the hotel case and incoming records.",
         },
     },

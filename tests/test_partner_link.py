@@ -50,13 +50,13 @@ def refresh(ws):
     return snapshot
 
 
-def test_chat_and_clue_handoffs_are_shared_only_deliberately():
+def test_only_discovered_clues_enter_both_notebooks_and_conversation():
     code, a, b = duo()
-    act(code, a, "inspect", target="note")
     assert room(code, b)["messages"] == []
     assert (
         act(code, a, "message", text="Look at this", target="note").status_code == 403
     )
+    act(code, a, "inspect", target="note")
     act(code, a, "share", target="note")
     shared = room(code, b)["messages"][-1]
     assert shared["kind"] == "clue" and shared["evidence_id"] == "note"
