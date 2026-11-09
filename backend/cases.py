@@ -1,5 +1,7 @@
 """Authored case packages. Solutions and unrevealed evidence never leave the server."""
 
+from .cast import expand_cast
+
 
 def clue(id, title, text, role, location, kind="document", requires=()):
     return dict(
@@ -563,6 +565,7 @@ BLUE = {
 }
 
 CASES = {c["id"]: c for c in [TRAIN, BLUE]}
+expand_cast(CASES)
 
 
 def catalog():
