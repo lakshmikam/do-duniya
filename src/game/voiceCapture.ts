@@ -8,6 +8,9 @@ export class SpeechSegmenter {
   private idle = 0;
   private noise = 0.003;
   hearing = false;
+  setNoiseFloor(level: number) {
+    this.noise = Math.max(0.003, Math.min(0.09, level));
+  }
   constructor(
     readonly sampleRate: number,
     readonly pauseMs = 1100,
@@ -30,9 +33,9 @@ export class SpeechSegmenter {
     const level = Math.sqrt(
       samples.reduce((sum, n) => sum + n * n, 0) / samples.length,
     );
-    const speech = level > Math.max(0.012, this.noise * 3);
+    const speech = level > Math.max(0.012, this.noise * 2.3);
     if (!speech && !this.hearing)
-      this.noise = Math.min(0.012, this.noise * 0.97 + level * 0.03);
+      this.noise = Math.min(0.09, this.noise * 0.97 + level * 0.03);
     if (!this.hearing) {
       this.idle += ms;
       this.preRoll.push(samples.slice());
@@ -58,7 +61,7 @@ export class SpeechSegmenter {
     return { level };
   }
   flush(): Float32Array | null {
-    if (this.voiced < 300) {
+    if (this.voiced < 160) {
       this.reset();
       return null;
     }
@@ -74,7 +77,31 @@ export class SpeechSegmenter {
   }
 }
 
-export function speechWav(samples: Float32Array, sampleRate: number): Blob {
+/** Explicit quiet-start measurement, before any listening/paid inference. */
+export class NoiseCalibration {
+  private levels: number[] = [];
+  private samples = 0;
+  complete = false;
+  floor = 0.003;
+  constructor(private rate: number) {}
+  feed(data: Float32Array) {
+    if (this.complete) return;
+    this.samples += data.length;
+    this.levels.push(
+      Math.sqrt(data.reduce((sum, n) => sum + n * n, 0) / data.length),
+    );
+    if (this.samples >= this.rate * 0.65) {
+      const ordered = this.levels.slice().sort((a, b) => a - b);
+      this.floor = ordered[Math.floor(ordered.length / 2)] || 0.003;
+      this.complete = true;
+    }
+  }
+}
+
+export function speechBuffer(
+  samples: Float32Array,
+  sampleRate: number,
+): ArrayBuffer {
   const rate = 16000,
     ratio = sampleRate / rate,
     size = Math.floor(samples.length / ratio);
@@ -108,5 +135,8 @@ export function speechWav(samples: Float32Array, sampleRate: number): Blob {
     value = Math.max(-1, Math.min(1, value / (end - start)));
     v.setInt16(44 + i * 2, value * (value < 0 ? 32768 : 32767), true);
   }
-  return new Blob([buffer], { type: "audio/wav" });
+  return buffer;
+}
+export function speechWav(samples: Float32Array, sampleRate: number): Blob {
+  return new Blob([speechBuffer(samples, sampleRate)], { type: "audio/wav" });
 }

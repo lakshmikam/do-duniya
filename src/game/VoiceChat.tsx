@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, Square, Headphones, Send } from "lucide-react";
-import { SpeechSegmenter, speechWav } from "./voiceCapture";
+import { SpeechSegmenter, speechWav, NoiseCalibration } from "./voiceCapture";
 
 type Phase =
   | "off"
   | "starting"
+  | "calibrating"
   | "listening"
   | "hearing"
   | "transcribing"
@@ -123,6 +124,7 @@ export function VoiceChat(props: Props) {
       setPhase("transcribing");
       const form = new FormData();
       form.append("audio", speechWav(samples, rate), "turn.wav");
+      form.append("character", latest.current.character);
       const heard = await (await post("transcribe", form, c.signal)).json();
       if (id !== generation.current) return;
       setTranscript(heard.text);
@@ -244,10 +246,19 @@ export function VoiceChat(props: Props) {
       silent.connect(ctx.destination);
       processor.current = node;
       const detector = new SpeechSegmenter(ctx.sampleRate, pauseMs);
+      const calibration = new NoiseCalibration(ctx.sampleRate);
       segment.current = detector;
-      setPhase("listening");
+      setPhase("calibrating");
       node.onaudioprocess = (e) => {
         if (!active.current || held.current) return;
+        if (!calibration.complete) {
+          calibration.feed(e.inputBuffer.getChannelData(0));
+          if (calibration.complete) {
+            detector.setNoiseFloor(calibration.floor);
+            setPhase("listening");
+          }
+          return;
+        }
         const result = detector.feed(e.inputBuffer.getChannelData(0));
         if (performance.now() - lastPaint.current > 120) {
           setLevel(Math.min(1, result.level * 12));
@@ -275,6 +286,7 @@ export function VoiceChat(props: Props) {
   const labels: Record<Phase, string> = {
     off: "Voice conversation",
     starting: "Connecting your microphone…",
+    calibrating: "Checking background sound · stay quiet for a moment",
     listening: "Your turn · speak naturally",
     hearing: "Listening · pause to send",
     transcribing: "Understanding what you said…",

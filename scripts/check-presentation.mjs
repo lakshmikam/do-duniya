@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 const root = process.cwd(),
   scratch = path.join(root, ".local-tools", "presentation-check");
 await fs.mkdir(scratch, { recursive: true });
-for (const name of ["World", "Opening"]) {
+for (const name of ["World", "Opening", "Exploration"]) {
   const source = await fs.readFile(
     path.join(root, "src/game", name + ".tsx"),
     "utf8",
@@ -23,7 +23,8 @@ for (const name of ["World", "Opening"]) {
         target: ts.ScriptTarget.ES2022,
       },
     })
-    .outputText.replace('"./World"', '"./World.js"');
+    .outputText.replace('"./World"', '"./World.js"')
+    .replace('import "./exploration.css";', "");
   await fs.writeFile(path.join(scratch, name + ".js"), output);
 }
 const { World, GameCharacter } = await import(
@@ -32,8 +33,27 @@ const { World, GameCharacter } = await import(
 const { Opening } = await import(
   pathToFileURL(path.join(scratch, "Opening.js"))
 );
+const { Exploration } = await import(
+  pathToFileURL(path.join(scratch, "Exploration.js"))
+);
 let checks = 0;
 for (const blue of [false, true]) {
+  const walk = renderToStaticMarkup(
+    React.createElement(Exploration, {
+      location: blue ? "street" : "platform",
+      blue,
+      objects: [{ id: "sample", title: "A permitted clue", kind: "object" }],
+      characters: [{ id: blue ? "henry" : "dev", name: "Witness" }],
+      onInspect: () => {},
+      onTalk: () => {},
+    }),
+  );
+  assert.ok(
+    walk.includes("Walk closer") &&
+      walk.includes("Explore without movement") &&
+      walk.includes("A permitted clue"),
+  );
+  checks++;
   for (const location of ["platform", "console", "relay", "records"]) {
     const html = renderToStaticMarkup(
       React.createElement(World, { blue, location }),
@@ -72,7 +92,7 @@ for (const id of ["dev", "leela", "mira", "james"]) {
 }
 const source = await fs.readFile(path.join(root, "src/main.tsx"), "utf8");
 assert.ok(
-  source.includes("scene-hotspots") && source.includes("setSoundOn(false)"),
+  source.includes("<Exploration") && source.includes("setSoundOn(false)"),
 );
 assert.ok(
   source.includes("clipCache.current") &&

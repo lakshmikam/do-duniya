@@ -15,7 +15,7 @@ await fs.writeFile(
     },
   }).outputText,
 );
-const { SpeechSegmenter, speechWav } = await import(
+const { SpeechSegmenter, speechWav, NoiseCalibration } = await import(
   pathToFileURL(path.join(folder, "capture.mjs"))
 );
 const silence = new Float32Array(1600),
@@ -62,6 +62,24 @@ assert.equal(v.getUint32(24, true), 16000);
 assert.equal(v.getUint16(22, true), 1);
 assert.equal(v.getUint32(40, true), 32000);
 assert.equal(v.getInt16(44, true), 8191);
+const background = new Float32Array(1600).fill(0.02),
+  calibration = new NoiseCalibration(16000);
+for (let i = 0; i < 7; i++) calibration.feed(background);
+assert.ok(calibration.complete);
+const noisy = new SpeechSegmenter(16000);
+noisy.setNoiseFloor(calibration.floor);
+for (let i = 0; i < 600; i++)
+  assert.ok(
+    !noisy.feed(background).audio,
+    "Constant fan noise must not consume provider calls",
+  );
+noisy.feed(speech);
+noisy.feed(speech);
+for (let i = 0; i < 11; i++) result = noisy.feed(background);
+assert.ok(
+  result.audio,
+  "A brief legitimate follow-up over calibrated noise must send",
+);
 console.log(
   "Pause detection checks passed: silence, short pauses, short clicks, one submission, idle timeout, max duration and 16k mono WAV.",
 );

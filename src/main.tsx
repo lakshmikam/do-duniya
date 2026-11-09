@@ -42,6 +42,9 @@ import { Opening } from "./game/Opening";
 import { GameSound } from "./game/sound";
 import { VoiceChat } from "./game/VoiceChat";
 import { speechWav } from "./game/voiceCapture";
+import { PartnerLink } from "./game/PartnerLink";
+import { Exploration } from "./game/Exploration";
+import type { RadioPacket } from "./game/PartnerRadio";
 import "./game/game.css";
 
 type Case = {
@@ -100,6 +103,10 @@ type Room = {
     ready: boolean;
   };
   players: {
+    radio?: boolean;
+    radio_talking?: boolean;
+    scene?: string;
+    interviewing?: string;
     id: string;
     name: string;
     role: string;
@@ -127,6 +134,25 @@ type Room = {
   timer: { enabled: boolean; elapsed: number; limit: number; paused: boolean };
   events: { id: string; text: string; time: number }[];
   notes: { id: string; author: string; text: string }[];
+  cooperation?: { service_gate?: boolean; store_latch?: boolean };
+  scene_audio?: {
+    id: string;
+    location: string;
+    title: string;
+    text: string;
+    caption: string;
+  }[];
+  messages?: {
+    comment?: string;
+    prompt?: string;
+    id: string;
+    author: string;
+    author_id: string;
+    text: string;
+    kind: string;
+    evidence_id?: string;
+    time: number;
+  }[];
   hint: string | null;
   revision: number;
   proposal: {
@@ -234,11 +260,18 @@ function Modal({
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "Tab" && ref.current) {
-        const nodes = Array.from(
-          ref.current.querySelectorAll<HTMLElement>(
-            "button:not(:disabled),input,textarea,select,a[href]",
+        const nodes = [
+          ...Array.from(
+            ref.current.querySelectorAll<HTMLElement>(
+              "button:not(:disabled),input,textarea,select,a[href]",
+            ),
           ),
-        );
+          ...Array.from(
+            document.querySelectorAll<HTMLElement>(
+              "[data-partner-dock] button:not(:disabled),[data-partner-dock] input:not(:disabled)",
+            ),
+          ),
+        ].filter((n) => n.getClientRects().length > 0);
         if (!nodes.length) return;
         const first = nodes[0],
           last = nodes[nodes.length - 1];
@@ -458,6 +491,16 @@ function App() {
   const [ambienceVolume, setAmbienceVolume] = useState(65);
   const [autoVoiceBlocked, setAutoVoiceBlocked] = useState(false);
   const [voiceChatActive, setVoiceChatActive] = useState(false);
+  const [handoffNote, setHandoffNote] = useState("");
+  const liveSocket = useRef<WebSocket | null>(null),
+    radioReceiver = useRef<((packet: RadioPacket) => void) | null>(null);
+  function sendLive(packet: object) {
+    const s = liveSocket.current;
+    if (!s || s.readyState !== WebSocket.OPEN || s.bufferedAmount > 64000)
+      return false;
+    s.send(JSON.stringify(packet));
+    return true;
+  }
   async function enableSound() {
     soundEngine.current ??= new GameSound();
     try {
@@ -523,6 +566,7 @@ function App() {
   const voiceRequest = useRef<AbortController | null>(null),
     viewEpoch = useRef(0),
     audioURL = useRef("");
+  useEffect(() => setHandoffNote(""), [clue?.id]);
   function sync(r: Room) {
     const previous = receivedRoom.current;
     if (previous?.code === r.code && r.revision < previous.revision) return;
@@ -569,13 +613,17 @@ function App() {
       socket = new WebSocket(
         `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/rooms/${room.code}/live`,
       );
+      liveSocket.current = socket;
       socket.onopen = () => {
         socket?.send(JSON.stringify({ token }));
         setConnected(true);
       };
       socket.onmessage = (e) => {
         try {
-          sync(JSON.parse(e.data));
+          const packet = JSON.parse(e.data);
+          if (packet.type === "radio" || packet.type === "radio_control")
+            radioReceiver.current?.(packet);
+          else sync(packet);
         } catch {}
       };
       socket.onclose = () => {
@@ -594,8 +642,24 @@ function App() {
       clearTimeout(retry);
       clearInterval(poll);
       socket?.close();
+      liveSocket.current = null;
     };
   }, [room?.code, token]);
+  useEffect(() => {
+    if (room && connected)
+      sendLive({
+        type: "presence",
+        location: locationId,
+        character: voiceChatActive || speaking ? witness?.id || "" : "",
+      });
+  }, [
+    room?.code,
+    connected,
+    locationId,
+    voiceChatActive,
+    witness?.id,
+    speaking,
+  ]);
   useEffect(() => {
     const t = setInterval(() => {
       setNow(Date.now());
@@ -1335,9 +1399,9 @@ function App() {
               </li>
             </ol>
             <div className="paper-note">
-              Use your usual voice call to talk to your partner. The in-game
-              microphone speaks to witnesses, not to your friend. Text play
-              works without API keys.
+              Use Partner Link to talk to each other inside the game. Enable
+              both radios, then hold to talk, or send a live message. Shared
+              clues appear in your conversation. Witness voice chat is separate.
             </div>
           </Modal>
         )}
@@ -1505,8 +1569,8 @@ function App() {
             <div className="paper-note">
               <Headphones size={19} />
               <span>
-                Keep your usual call open to talk to your partner. In-game voice
-                is for witness questions.{" "}
+                Once you start, Partner Link gives you live messages and a
+                hold-to-talk radio inside the game.{" "}
                 {room.solo &&
                   "Solo rehearsal lets you switch roles; it is not a simulated teammate."}
               </span>
@@ -1608,6 +1672,16 @@ function App() {
               </div>
             </aside>
           </div>
+          {!room.result?.success && (
+            <button
+              className="primary"
+              disabled={busy}
+              onClick={() => void act("reopen")}
+            >
+              <RefreshCw size={17} />
+              Revisit the evidence · keep our discoveries
+            </button>
+          )}
           <div className="ending-credit">
             {room.case.credit}
             {room.case.source && (
@@ -1698,7 +1772,13 @@ function App() {
                     const a = room.objective!.action;
                     if (a.kind === "share")
                       void act("share", { target: a.target });
-                    else if (a.kind === "location") {
+                    else if (a.kind === "assist") {
+                      setLocationId(a.location || "console");
+                      void act("assist", { target: a.target });
+                    } else if (a.kind === "partner") {
+                      setLocationId(a.location || "relay");
+                      window.dispatchEvent(new Event("partner-open"));
+                    } else if (a.kind === "location") {
                       setLocationId(a.target!);
                       setWitness(null);
                       setClue(null);
@@ -1722,194 +1802,144 @@ function App() {
                   {room.solo ? "SOLO REHEARSAL" : "COOPERATIVE INVESTIGATION"}
                 </span>
               </div>
-              <div className="scene-picture" key={locationId}>
-                <div className="scene-chapter">
-                  CHAPTER{" "}
-                  {Math.max(
-                    1,
-                    room.locations.findIndex((l) => l.id === locationId) + 1,
-                  )}{" "}
-                  · EXPLORE THE SCENE
-                </div>
-                <LocationArt
-                  id={locationId}
-                  blue={room.case.id === "blue-carbuncle"}
-                />
-                <div className="scene-vignette" />
-                <div className="scene-title">
-                  <span className="eyebrow">{room.case.eyebrow}</span>
-                  <h1>{activeLocation?.name}</h1>
-                  <p>
-                    {activeLocation && (
-                      <StoryText
-                        text={activeLocation.description}
-                        room={room}
-                        token={token}
-                      />
-                    )}
-                  </p>
-                </div>
-                <div
-                  className="scene-hotspots"
-                  aria-label="Things to investigate in this scene"
-                >
-                  {room.objects
-                    .filter((o) => o.location === locationId)
-                    .map((o, i) => (
-                      <button
-                        key={o.id}
-                        className={
-                          "scene-hotspot hotspot-" +
-                          i +
-                          (o.discovered ? " discovered" : "")
-                        }
-                        disabled={busy || room.status !== "playing"}
-                        onClick={() =>
-                          o.discovered
-                            ? setClue(
-                                room.evidence.find((e) => e.id === o.id) ||
-                                  null,
-                              )
-                            : inspect(o.id)
-                        }
-                      >
-                        <span>
-                          {o.discovered ? (
-                            <Check size={22} />
-                          ) : o.kind === "audio" ? (
-                            <Radio size={24} />
-                          ) : (
-                            <Search size={24} />
-                          )}
-                        </span>
-                        <strong>{o.title}</strong>
-                        <small>
-                          {o.discovered ? "Review clue" : "Investigate"}
-                        </small>
-                      </button>
-                    ))}
-                </div>
-                <div className="scene-cast">
-                  {room.characters
-                    .filter((c) => c.location === locationId)
-                    .map((c) => (
-                      <button
-                        key={c.id}
-                        className="scene-person"
-                        disabled={room.status !== "playing"}
-                        onClick={() => {
-                          soundEngine.current?.cue("tap");
-                          setWitness(c);
-                          setDialogue(c.initial);
-                          setQuestion("");
-                        }}
-                      >
-                        <GameCharacter id={c.id} />
-                        <span>
-                          {c.name}
-                          <small>Tap to talk</small>
-                        </span>
-                      </button>
-                    ))}
-                </div>
-                <span className="scene-label">
-                  {soundOn
-                    ? "♫ ATMOSPHERE ON"
-                    : "ENABLE SOUND FOR THE FULL EXPERIENCE"}
-                </span>
-              </div>
-              <section className="leads">
-                <div className="leads-heading">
-                  <span className="eyebrow">LOOK A LITTLE CLOSER</span>
-                  <span>
-                    {
-                      room.objects.filter((o) => o.location === locationId)
-                        .length
-                    }{" "}
-                    leads
-                  </span>
-                </div>
-                <div className="lead-grid">
-                  {room.objects
-                    .filter((o) => o.location === locationId)
-                    .map((o, i) => (
-                      <button
-                        className={"lead-card " + (o.discovered ? "found" : "")}
-                        key={o.id}
-                        disabled={busy || room.status !== "playing"}
-                        onClick={() =>
-                          o.discovered
-                            ? setClue(
-                                room.evidence.find((e) => e.id === o.id) ||
-                                  null,
-                              )
-                            : inspect(o.id)
-                        }
-                      >
-                        <span className="lead-illustration">
-                          {o.kind === "audio" ? (
-                            <Radio size={29} />
-                          ) : o.kind === "object" ? (
-                            <Fingerprint size={29} />
-                          ) : o.kind === "testimony" ? (
-                            <Users size={29} />
-                          ) : (
-                            <FileText size={29} />
-                          )}
-                        </span>
-                        <span>
-                          <small>
-                            {o.kind.toUpperCase()} / 0{i + 1}
-                          </small>
-                          <strong>{o.title}</strong>
-                          <em>
-                            {o.discovered
-                              ? "Open your discovery"
-                              : "Inspect this lead"}{" "}
-                            <ArrowUpRight size={13} />
-                          </em>
-                        </span>
-                        {o.discovered && (
-                          <Check className="lead-check" size={15} />
-                        )}
-                      </button>
-                    ))}
-                </div>
-              </section>
-              <section className="witnesses">
-                <span className="eyebrow">PEOPLE HERE</span>
-                <div className="witness-grid">
-                  {room.characters
-                    .filter((c) => c.location === locationId)
-                    .map((c) => (
-                      <button
-                        className="witness-card"
-                        key={c.id}
-                        disabled={room.status !== "playing"}
-                        onClick={() => {
-                          setWitness(c);
-                          setDialogue(c.initial);
-                          setQuestion("");
-                        }}
-                      >
-                        <Portrait id={c.id} />
-                        <span>
-                          <strong>{c.name}</strong>
-                          <small>{c.occupation}</small>
-                          <em>
-                            Start a conversation <ArrowRight size={14} />
-                          </em>
-                        </span>
-                      </button>
-                    ))}
-                  {!room.characters.some((c) => c.location === locationId) && (
-                    <p className="muted small">
-                      Some answers are in the evidence. Inspect the available
-                      leads, then compare notes with your partner.
-                    </p>
+              <div className="scene-summary">
+                <h1>{activeLocation?.name}</h1>
+                <p>
+                  {activeLocation && (
+                    <StoryText
+                      text={activeLocation.description}
+                      room={room}
+                      token={token}
+                    />
                   )}
-                </div>
-              </section>
+                </p>
+              </div>
+              <Exploration
+                key={room.code + "|" + room.you.role + "|" + locationId}
+                location={locationId}
+                blue={room.case.id === "blue-carbuncle"}
+                playerName={room.you.name}
+                objects={[
+                  ...room.objects
+                    .filter((o) => o.location === locationId)
+                    .map((o) =>
+                      o.id === "found" && !o.discovered
+                        ? {
+                            ...o,
+                            title: room.cooperation?.service_gate
+                              ? "Release the store latch"
+                              : "Store latch · power needed",
+                          }
+                        : o,
+                    ),
+                  ...(room.case.id === "last-announcement" &&
+                  room.you.role === "archive" &&
+                  locationId === "console" &&
+                  room.evidence.some((e) => e.id === "route" && e.shared)
+                    ? [
+                        {
+                          id: "service-power",
+                          title: room.cooperation?.service_gate
+                            ? "Service gate · powered"
+                            : "Power the service gate",
+                          kind: "control",
+                          discovered: !!room.cooperation?.service_gate,
+                        },
+                      ]
+                    : []),
+                ]}
+                characters={room.characters.filter(
+                  (c) => c.location === locationId,
+                )}
+                disabled={
+                  busy ||
+                  opening ||
+                  room.status !== "playing" ||
+                  !!(witness || clue || modal)
+                }
+                onInspect={(id) => {
+                  if (id === "service-power") {
+                    void act("assist", { target: "service_gate" });
+                    return;
+                  }
+                  const o = room.objects.find((o) => o.id === id);
+                  if (o?.discovered)
+                    setClue(room.evidence.find((e) => e.id === id) || null);
+                  else void inspect(id);
+                }}
+                onTalk={(id) => {
+                  const c = room.characters.find((c) => c.id === id);
+                  if (c) {
+                    soundEngine.current?.cue("tap");
+                    setWitness(c);
+                    setDialogue(c.initial);
+                    setQuestion("");
+                  }
+                }}
+              />
+              {room.case.id === "last-announcement" &&
+                room.evidence.some((e) => e.id === "route" && e.shared) && (
+                  <section className="cooperative-event">
+                    <span className="eyebrow">
+                      A JOB FOR BOTH INVESTIGATORS
+                    </span>
+                    <h3>Open the passage together</h3>
+                    <ol>
+                      <li className="done">Route shared by records</li>
+                      <li
+                        className={room.cooperation?.service_gate ? "done" : ""}
+                      >
+                        Records: power the service gate at the signal cabin
+                      </li>
+                      <li
+                        className={room.cooperation?.store_latch ? "done" : ""}
+                      >
+                        Field: reach the passage and release the store latch
+                      </li>
+                    </ol>
+                    <p>
+                      {room.cooperation?.store_latch
+                        ? "You opened the passage together. Compare what you learned with the shared records."
+                        : room.cooperation?.service_gate
+                          ? "Power is on. The field investigator can now release the latch from the passage."
+                          : "Use Partner Link to ask for power. The power stays on; there is no timing trap."}
+                      {room.solo &&
+                        " In solo rehearsal, switch perspectives to operate each side."}
+                    </p>
+                  </section>
+                )}
+              {room.scene_audio
+                ?.filter((a) => a.location === locationId)
+                .map((a) => (
+                  <section className="earwitness-player" key={a.id}>
+                    <div>
+                      <Radio size={22} />
+                      <span>
+                        <strong>{a.title}</strong>
+                        <small>{a.caption}</small>
+                      </span>
+                    </div>
+                    <button
+                      className="secondary"
+                      disabled={
+                        voiceBusy ||
+                        !room.providers.timbre ||
+                        room.status !== "playing"
+                      }
+                      onClick={async () => {
+                        if (!soundOn) await enableSound();
+                        void listen(a.text, "station_announcer");
+                      }}
+                    >
+                      {speaking ? <Square size={16} /> : <Play size={16} />}{" "}
+                      {speaking ? "Stop playback" : "Listen"}
+                    </button>
+                    <details>
+                      <summary>Read the words</summary>
+                      <p>{a.text}</p>
+                    </details>
+                  </section>
+                ))}
             </main>
             <aside className="case-sidebar">
               <div className="clock-box">
@@ -2004,6 +2034,13 @@ function App() {
                           {p.connected ? "Connected" : "Not connected"} ·{" "}
                           {LANGS[p.language]}
                         </small>
+                        {p.connected && (
+                          <small>
+                            {p.interviewing
+                              ? "Speaking with " + p.interviewing
+                              : p.scene || room.case.roles[p.role].name}
+                          </small>
+                        )}
                       </span>
                     </div>
                   ))}
@@ -2076,6 +2113,29 @@ function App() {
           )}
         </>
       )}
+      {!room.solo && room.status === "playing" && !opening && (
+        <PartnerLink
+          soundEnabled={soundOn}
+          unlock={enableSound}
+          you={room.you.id}
+          peer={room.players.find((p) => p.id !== room.you.id)}
+          messages={room.messages || []}
+          connected={connected}
+          enabled={room.status === "playing"}
+          suppressed={voiceChatActive || speaking}
+          send={sendLive}
+          receiver={radioReceiver}
+          onMessage={async (text) => !!(await act("message", { text }))}
+          onClue={(id) => {
+            const e = room.evidence.find((e) => e.id === id);
+            if (e) {
+              setWitness(null);
+              setModal(null);
+              setClue(e);
+            }
+          }}
+        />
+      )}
       {toast && (
         <div className="toast" role="status">
           <CheckCircle2 size={17} />
@@ -2116,11 +2176,22 @@ function App() {
               <p>Displayed above · matches the spoken passage.</p>
             </div>
           )}
+          {!shownClue.shared && !room.solo && (
+            <label className="handoff-note">
+              What should your partner check?
+              <textarea
+                maxLength={300}
+                value={handoffNote}
+                onChange={(e) => setHandoffNote(e.target.value)}
+                placeholder="Optional: tell them what connects to their side…"
+              />
+            </label>
+          )}
           <button
             className={"full " + (shownClue.shared ? "secondary" : "primary")}
             disabled={busy || shownClue.shared || room.status !== "playing"}
             onClick={async () => {
-              await act("share", { target: shownClue.id });
+              await act("share", { target: shownClue.id, text: handoffNote });
               setToast("Evidence shared with your partner.");
             }}
           >
@@ -2422,9 +2493,9 @@ function App() {
             ))}
           </div>
           <div className="paper-note">
-            Keys belong in the server’s .env file. Text topics and the entire
-            mystery work without provider calls. Built-in partner calling is not
-            included; use your usual call.
+            Partner Link connects both investigators with live messages and a
+            hold-to-talk radio. Witness voices use the configured AI services.
+            Text topics and the mystery remain playable without model calls.
           </div>
           <button className="secondary full" onClick={leave}>
             <LogOut size={16} /> Leave this device’s session
