@@ -37,6 +37,10 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import "./style.css";
+import { World, GameCharacter } from "./game/World";
+import { Opening } from "./game/Opening";
+import { GameSound } from "./game/sound";
+import "./game/game.css";
 
 type Case = {
   id: string;
@@ -189,520 +193,14 @@ function Mark({ small = false }: { small?: boolean }) {
     </span>
   );
 }
-function SceneArt({
-  blue = false,
-  detail = false,
-}: {
-  blue?: boolean;
-  detail?: boolean;
-}) {
-  return (
-    <svg
-      className={"scene-art " + (detail ? "detail" : "")}
-      viewBox="0 0 1000 650"
-      role="img"
-      aria-label={
-        blue
-          ? "An ink illustration of a snowy London street and an illuminated blue jewel"
-          : "An ink illustration of a night express beneath a station roof in the rain"
-      }
-    >
-      <defs>
-        <linearGradient id={blue ? "sky-blue" : "sky-train"} x2="0" y2="1">
-          <stop stopColor={blue ? "#17333c" : "#1a3537"} />
-          <stop offset="1" stopColor="#345050" />
-        </linearGradient>
-        <radialGradient id="lamp">
-          <stop stopColor="#f4db9b" stopOpacity=".5" />
-          <stop offset="1" stopColor="#f4db9b" stopOpacity="0" />
-        </radialGradient>
-        <pattern
-          id="rain"
-          width="47"
-          height="66"
-          patternUnits="userSpaceOnUse"
-          patternTransform="rotate(19)"
-        >
-          <path d="M10 0v23M32 42v10" stroke="#ccd8ca" strokeOpacity=".18" />
-        </pattern>
-        <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse">
-          <path d="M0 8L8 0" stroke="#8da39b" strokeOpacity=".15" />
-        </pattern>
-      </defs>
-      <rect
-        width="1000"
-        height="650"
-        fill={`url(#${blue ? "sky-blue" : "sky-train"})`}
-      />
-      {blue ? (
-        <g>
-          <circle cx="730" cy="125" r="76" fill="#d6ddce" opacity=".65" />
-          <g fill="#142b30" stroke="#68827f" strokeWidth="2">
-            <path d="M40 460V190l112-65 110 65v270M75 163V77h30v70M264 460V226l135-78 140 78v234M545 460V125l149-83 133 83v335M838 460V210l122-70 40 30v290" />
-            <path d="M40 204h222M264 242h275M545 145h282M838 225h162" />
-          </g>
-          {[85, 162, 305, 385, 465, 590, 670, 750, 880, 950].map((x, i) => (
-            <g key={x} fill="#dac48a" opacity={i % 3 === 0 ? 0.8 : 0.25}>
-              <rect x={x} y={i > 4 ? 185 : 275} width="30" height="52" />
-              <rect x={x} y="365" width="30" height="52" />
-            </g>
-          ))}
-          <path d="M0 500Q440 429 1000 470V650H0Z" fill="#263e40" />
-          <path
-            d="M0 536L1000 490M100 650L560 472M650 650L700 475"
-            stroke="#93a19a"
-            strokeOpacity=".3"
-            fill="none"
-          />
-          <g stroke="#0e252a" strokeWidth="9">
-            <path d="M250 225V534M210 233h80" />
-            <path
-              d="M230 226l-10-62h60l-10 62Z"
-              fill="#eed094"
-              strokeWidth="4"
-            />
-          </g>
-          <circle cx="250" cy="195" r="125" fill="url(#lamp)" />
-          <g transform="translate(515 330)" fill="#0d2529">
-            <path d="M-12 58l-25 125h82L23 58Z" />
-            <ellipse cy="38" rx="22" ry="26" />
-            <path d="M-35 18h70l-13-17h-46Z" />
-            <path
-              d="M-10 180l-15 80M24 180l20 80"
-              stroke="#0d2529"
-              strokeWidth="16"
-            />
-          </g>
-          <g transform="translate(750 410)">
-            <path
-              d="M0 28L35 0l35 28-35 50Z"
-              fill="#73b7bd"
-              stroke="#c7e0d0"
-              strokeWidth="2"
-            />
-            <path
-              d="M0 28h70M35 0L22 28l13 50 14-50Z"
-              stroke="#c7e0d0"
-              fill="none"
-            />
-          </g>
-          {Array.from({ length: 35 }, (_, i) => (
-            <circle
-              key={i}
-              cx={(i * 137) % 1000}
-              cy={(i * 71) % 620}
-              r={(i % 3) + 1}
-              fill="#e5e7d7"
-              opacity=".5"
-            />
-          ))}
-        </g>
-      ) : (
-        <g>
-          <path
-            d="M0 30L1000 130M0 73L1000 170M160 0L550 280M600 0L790 300M920 0L960 300"
-            stroke="#0d2427"
-            strokeWidth="15"
-          />
-          <path d="M0 85L1000 180" stroke="#708880" strokeWidth="2" />
-          <g stroke="#10292d" fill="none">
-            <path d="M100 95v440M100 185h375M885 164v372" strokeWidth="13" />
-            <path d="M100 230l120-120M885 282l-110-125" strokeWidth="6" />
-          </g>
-          <g transform="translate(410 120)">
-            <path
-              d="M0 0h100v85H0Z"
-              fill="#d4d6bd"
-              stroke="#10292d"
-              strokeWidth="8"
-            />
-            <circle
-              cx="50"
-              cy="42"
-              r="31"
-              fill="none"
-              stroke="#253b38"
-              strokeWidth="2"
-            />
-            <path d="M50 20v24l-18 9" stroke="#253b38" strokeWidth="3" />
-            <circle cx="50" cy="43" r="3" fill="#253b38" />
-          </g>
-          <path d="M0 445L1000 410V650H0Z" fill="#304748" />
-          <path
-            d="M0 580L1000 468M0 625L1000 482"
-            stroke="#0e282c"
-            strokeWidth="12"
-          />
-          <path
-            d="M0 566L1000 457M0 612L1000 473"
-            stroke="#a2b1a4"
-            strokeWidth="3"
-          />
-          <g transform="translate(215 270)">
-            <path
-              d="M0 35Q0 0 40 0h575q55 0 70 42l36 129H0Z"
-              fill="#182f32"
-              stroke="#94a39a"
-              strokeWidth="2"
-            />
-            <path d="M0 107h701v53H0Z" fill="#68766a" />
-            <path d="M0 122h704" stroke="#d1bf85" strokeWidth="4" />
-            {[35, 123, 211, 299, 387, 475].map((x, i) => (
-              <g key={x}>
-                <rect
-                  x={x}
-                  y="26"
-                  width="64"
-                  height="64"
-                  rx="5"
-                  fill={i === 3 ? "#e4cf94" : "#a4afa0"}
-                  opacity={i === 3 ? 0.85 : 0.35}
-                />
-                <path d={`M${x + 32} 26v64`} stroke="#1a3030" strokeWidth="4" />
-              </g>
-            ))}
-            <path d="M582 25h48l21 63h-69Z" fill="#c6d0b5" opacity=".6" />
-            <path d="M662 105h42l8 27h-42Z" fill="#ead9a3" />
-            {[70, 170, 500, 610].map((x) => (
-              <g key={x}>
-                <circle
-                  cx={x}
-                  cy="171"
-                  r="24"
-                  fill="#0d2427"
-                  stroke="#71877c"
-                  strokeWidth="5"
-                />
-                <circle cx={x} cy="171" r="8" fill="#65776d" />
-              </g>
-            ))}
-            <text
-              x="305"
-              y="148"
-              fill="#d7d4ba"
-              fontSize="15"
-              letterSpacing="5"
-            >
-              NIGHT EXPRESS
-            </text>
-          </g>
-          <g>
-            <path
-              d="M115 355h145v75H115Z"
-              fill="#20383a"
-              stroke="#98a394"
-              strokeWidth="2"
-            />
-            <path d="M115 368h145M162 355v75M212 355v75" stroke="#8e9b8c" />
-            <path
-              d="M108 434h168l25-60"
-              stroke="#152e31"
-              strokeWidth="7"
-              fill="none"
-            />
-            <circle cx="135" cy="448" r="12" fill="#112a2d" />
-            <circle cx="253" cy="448" r="12" fill="#112a2d" />
-          </g>
-          <rect width="1000" height="650" fill="url(#rain)" />
-          <ellipse
-            cx="840"
-            cy="495"
-            rx="130"
-            ry="13"
-            fill="#c4c8a2"
-            opacity=".1"
-          />
-          <path
-            d="M0 520L1000 433M0 540L1000 443"
-            stroke="#abbbb0"
-            strokeOpacity=".2"
-          />
-        </g>
-      )}
-      <rect width="1000" height="650" fill="url(#hatch)" />
-    </svg>
-  );
+function SceneArt({ blue = false }: { blue?: boolean; detail?: boolean }) {
+  return <World blue={blue} />;
 }
 function LocationArt({ id, blue }: { id: string; blue: boolean }) {
-  if (["platform", "street", "market"].includes(id))
-    return <SceneArt detail blue={blue} />;
-  const files = ["records", "ledger", "hotel"].includes(id),
-    console = id === "console",
-    passage = id === "relay";
-  return (
-    <svg
-      className="scene-art detail"
-      viewBox="0 0 1000 650"
-      role="img"
-      aria-label={
-        passage
-          ? "An illuminated doorway at the end of a dark service passage"
-          : console
-            ? "A railway broadcast desk with switches and a recording reel"
-            : files
-              ? "A lamplit archive with ledgers and document shelves"
-              : "A quiet office with an unfinished note on a desk"
-      }
-    >
-      <rect width="1000" height="650" fill="#284341" />
-      <path
-        d="M0 0L180 130h650L1000 0M180 130v370L0 650M830 130v370l170 150M180 500h650"
-        fill="#1c3535"
-        stroke="#6e8577"
-        strokeWidth="2"
-      />
-      <path
-        d="M0 580L1000 530M0 620L1000 585M260 650l70-150M800 650l-50-150"
-        stroke="#49665a"
-        fill="none"
-      />
-      {passage ? (
-        <g>
-          <path
-            d="M350 100h320v430H350Z"
-            fill="#152d2f"
-            stroke="#8d9d85"
-            strokeWidth="3"
-          />
-          <path d="M375 125h160v385H375Z" fill="#dacb91" opacity=".7" />
-          <path
-            d="M535 125l105-30v440l-105-25Z"
-            fill="#33514b"
-            stroke="#8b9d80"
-            strokeWidth="2"
-          />
-          <path
-            d="M535 510L320 650h395l-180-140"
-            fill="#dec98c"
-            opacity=".15"
-          />
-          <rect
-            x="260"
-            y="260"
-            width="60"
-            height="90"
-            fill="#1b3534"
-            stroke="#85977e"
-          />
-          <path d="M275 280h30m-30 15h30m-30 15h30" stroke="#85977e" />
-          <rect
-            x="720"
-            y="350"
-            width="135"
-            height="95"
-            fill="#6b7764"
-            stroke="#b3b796"
-          />
-          <path d="M720 365h135m-92-15v95m50-95v95" stroke="#263e36" />
-          <text
-            x="465"
-            y="80"
-            fill="#b7c0a2"
-            textAnchor="middle"
-            fontSize="16"
-            letterSpacing="6"
-          >
-            RELAY STORE
-          </text>
-        </g>
-      ) : (
-        <g>
-          {files ? (
-            <g>
-              {[280, 470, 660].map((x, i) => (
-                <g key={x}>
-                  <rect
-                    x={x}
-                    y="120"
-                    width="155"
-                    height="290"
-                    fill="#172f30"
-                    stroke="#687e6c"
-                    strokeWidth="2"
-                  />
-                  {[175, 250, 325, 395].map((y) => (
-                    <g key={y}>
-                      <path
-                        d={`M${x} ${y}h155`}
-                        stroke="#91a086"
-                        strokeWidth="5"
-                      />
-                      {[20, 45, 70, 95, 120].map((b, j) => (
-                        <rect
-                          key={b}
-                          x={x + b}
-                          y={y - 44}
-                          width="16"
-                          height="40"
-                          fill={(j + i) % 2 ? "#89927a" : "#c7bd8d"}
-                          opacity=".7"
-                        />
-                      ))}
-                    </g>
-                  ))}
-                </g>
-              ))}
-            </g>
-          ) : (
-            <g>
-              <rect
-                x="600"
-                y="130"
-                width="180"
-                height="220"
-                fill="#45625b"
-                stroke="#8f9c82"
-                strokeWidth="4"
-              />
-              <path
-                d="M690 130v220m-90-120h180"
-                stroke="#243f39"
-                strokeWidth="6"
-              />
-              {[620, 650, 710, 750].map((x) => (
-                <path
-                  key={x}
-                  d={`M${x} 145l-25 70m25 40l-25 70`}
-                  stroke="#b8c2a5"
-                  strokeOpacity=".3"
-                />
-              ))}
-            </g>
-          )}
-          <path
-            d="M160 390h650l90 80H80Z"
-            fill="#62735f"
-            stroke="#a8af8d"
-            strokeWidth="2"
-          />
-          <path
-            d="M80 470h820v42H80Zm45 42h35v138h-35m660-138h35v138h-35"
-            fill="#203d38"
-            stroke="#6c826a"
-            strokeWidth="2"
-          />
-          {console ? (
-            <g>
-              <path
-                d="M210 280h330l35 135H185Z"
-                fill="#1a3234"
-                stroke="#9aab8c"
-                strokeWidth="3"
-              />
-              <circle
-                cx="270"
-                cy="330"
-                r="35"
-                fill="#75856e"
-                stroke="#c0c6a4"
-                strokeWidth="4"
-              />
-              <circle
-                cx="440"
-                cy="330"
-                r="35"
-                fill="#75856e"
-                stroke="#c0c6a4"
-                strokeWidth="4"
-              />
-              <path d="M285 350h140" stroke="#c0c6a4" strokeWidth="3" />
-              {[240, 280, 320, 360, 400, 440, 480].map((x) => (
-                <g key={x}>
-                  <path d={`M${x} 385v18`} stroke="#c4c9a9" strokeWidth="3" />
-                  <circle cx={x} cy="381" r="4" fill="#dec67f" />
-                </g>
-              ))}
-              <path
-                d="M630 410v-90l-25-32"
-                fill="none"
-                stroke="#c1c7a7"
-                strokeWidth="6"
-              />
-              <ellipse
-                cx="600"
-                cy="280"
-                rx="12"
-                ry="22"
-                fill="#152d30"
-                stroke="#a6b596"
-              />
-            </g>
-          ) : (
-            <g>
-              <path d="M210 407l200-20 40 65-220 12Z" fill="#d9d2a9" />
-              <path
-                d="M237 416l151-12m-147 24l152-12m-144 25l135-11"
-                stroke="#849075"
-                strokeWidth="2"
-              />
-              <rect
-                x="500"
-                y="415"
-                width="80"
-                height="40"
-                rx="2"
-                fill="#7a8870"
-              />
-              <path
-                d="M545 415v-65h35"
-                stroke="#b4bea0"
-                strokeWidth="3"
-                fill="none"
-              />
-              <path d="M560 350l12-60h30l22 60Z" fill="#b3b18b" />
-              <ellipse
-                cx="590"
-                cy="368"
-                rx="90"
-                ry="52"
-                fill="#e1cb85"
-                opacity=".1"
-              />
-              <ellipse cx="680" cy="432" rx="24" ry="9" fill="#c7c9a4" />
-              <path d="M658 429v-30h44v30" fill="#aab595" />
-              <path
-                d="M702 404q25-4 0 20"
-                stroke="#b4bf9c"
-                strokeWidth="4"
-                fill="none"
-              />
-            </g>
-          )}
-        </g>
-      )}
-    </svg>
-  );
+  return <World location={id} blue={blue} />;
 }
 function Portrait({ id }: { id: string }) {
-  const woman = ["leela", "mira"].includes(id);
-  return (
-    <svg viewBox="0 0 160 180" className="portrait" aria-hidden="true">
-      <rect width="160" height="180" fill="#c8ccbb" />
-      <path d="M0 180q5-63 80-65t80 65" fill="#263f3f" />
-      <path d="M65 107v29l15 12 16-16v-29" fill="#b5aa8c" />
-      <ellipse cx="80" cy="76" rx="34" ry="43" fill="#b9b096" />
-      <path
-        d={
-          woman
-            ? "M45 94Q25 20 80 18t36 86l-14-35-45-16Z"
-            : "M44 65Q35 18 82 20t32 45L94 48 54 53Z"
-        }
-        fill="#263837"
-      />
-      <path
-        d="M58 76h12m20 0h12M75 103q7 4 14-1"
-        stroke="#4c5549"
-        strokeWidth="3"
-        fill="none"
-      />
-      <path d="M80 78l-6 15h10" stroke="#8e886e" strokeWidth="2" fill="none" />
-      <path
-        d="M65 129l15 19-16 15-15-28M96 129l-16 19 17 15 13-29"
-        fill="#6e7c6e"
-      />
-      <path d="M80 148v32" stroke="#182f32" strokeWidth="3" />
-    </svg>
-  );
+  return <GameCharacter id={id} />;
 }
 function Modal({
   title,
@@ -777,6 +275,29 @@ function App() {
     [selected, setSelected] = useState(0),
     [room, setRoom] = useState<Room | null>(null),
     [token, setToken] = useState("");
+  const [soundOn, setSoundOn] = useState(false),
+    [opening, setOpening] = useState(false),
+    [openingSeen, setOpeningSeen] = useState("");
+  const soundEngine = useRef<GameSound | null>(null),
+    clipCache = useRef(new Map<string, Blob>()),
+    voiceElement = useRef<HTMLAudioElement | null>(null),
+    introNarrated = useRef(new Set<string>());
+  const [autoVoiceBlocked, setAutoVoiceBlocked] = useState(false);
+  async function enableSound() {
+    soundEngine.current ??= new GameSound();
+    try {
+      await soundEngine.current.unlock();
+      setSoundOn(true);
+      setAutoVoiceBlocked(false);
+      // Reuse a media element unlocked within this gesture for mobile browsers.
+      voiceElement.current ??= new Audio();
+      voiceElement.current.src =
+        "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQIAAAAAAA==";
+      await voiceElement.current.play().catch(() => {});
+    } catch {
+      setToast("Sound could not start. You can still play with subtitles.");
+    }
+  }
   const [accessRequired, setAccessRequired] = useState(false),
     [accessCode, setAccessCode] = useState("");
   const [setup, setSetup] = useState<"create" | "join" | null>(null),
@@ -936,7 +457,79 @@ function App() {
     modal,
     room?.code,
     room?.status,
+    soundOn,
   ]);
+  useEffect(() => {
+    const running = room?.status === "playing";
+    if (running && room.code !== openingSeen) {
+      setOpening(true);
+      setOpeningSeen(room.code);
+    }
+  }, [room?.status, room?.code, openingSeen]);
+  useEffect(() => {
+    if (!soundEngine.current) return;
+    soundEngine.current.setMuted(!soundOn);
+    if (soundOn && room?.status === "playing" && !opening)
+      soundEngine.current.startAtmosphere(room.case.id === "blue-carbuncle");
+    else soundEngine.current.stopAtmosphere();
+    return () => soundEngine.current?.stopAtmosphere();
+  }, [soundOn, room?.status, room?.case.id, opening]);
+  useEffect(() => {
+    soundEngine.current?.duck(speaking);
+  }, [speaking]);
+  useEffect(() => {
+    if (
+      !soundOn ||
+      !room?.providers.timbre ||
+      room.status !== "playing" ||
+      opening
+    )
+      return;
+    const isIntro =
+      !witness && !clue && !introNarrated.current.has(room.code) && !modal;
+    const text = witness
+      ? dialogue
+      : clue?.text || (isIntro ? room.case.brief : "");
+    if (!text) return;
+    const t = setTimeout(() => {
+      if (isIntro) introNarrated.current.add(room.code);
+      void listen(text, witness?.id || "", true);
+    }, 180);
+    return () => clearTimeout(t);
+  }, [
+    soundOn,
+    witness?.id,
+    dialogue,
+    clue?.id,
+    room?.you.language,
+    room?.status,
+    opening,
+  ]);
+  useEffect(() => {
+    if (toast) soundEngine.current?.cue("clue");
+  }, [toast]);
+  useEffect(() => {
+    if (locationId) soundEngine.current?.cue("travel");
+  }, [locationId]);
+  useEffect(() => {
+    if (room?.status === "completed") soundEngine.current?.cue("reveal");
+  }, [room?.status]);
+  useEffect(() => {
+    const visibility = () => {
+      if (document.hidden) {
+        soundEngine.current?.stopAtmosphere();
+        audio.current?.pause();
+        voiceRequest.current?.abort();
+        setSpeaking(false);
+        setVoiceBusy(false);
+      } else if (soundOn && room?.status === "playing" && !opening) {
+        soundEngine.current?.startAtmosphere(room.case.id === "blue-carbuncle");
+      }
+    };
+    document.addEventListener("visibilitychange", visibility);
+    return () => document.removeEventListener("visibilitychange", visibility);
+  }, [soundOn, room?.status, room?.case.id, opening]);
+  useEffect(() => () => soundEngine.current?.dispose(), []);
   useEffect(
     () => () => {
       audio.current?.pause();
@@ -1073,9 +666,9 @@ function App() {
       if (epoch === viewEpoch.current) setVoiceBusy(false);
     }
   }
-  async function listen(text: string, character = "") {
+  async function listen(text: string, character = "", automatic = false) {
     if (!room) return;
-    if (speaking) {
+    if (speaking && !automatic) {
       audio.current?.pause();
       setSpeaking(false);
       return;
@@ -1087,26 +680,34 @@ function App() {
     setVoiceBusy(true);
     setError("");
     try {
-      const r = await fetch(`/api/rooms/${room.code}/speech`, {
-        signal: controller.signal,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ text, character }),
-      });
-      if (!r.ok) {
-        const d = await r.json();
-        throw new Error(d.detail);
+      const cacheKey = room.you.language + "|" + character + "|" + text;
+      let blob = clipCache.current.get(cacheKey);
+      if (!blob) {
+        const r = await fetch(`/api/rooms/${room.code}/speech`, {
+          signal: controller.signal,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text, character }),
+        });
+        if (!r.ok) {
+          const d = await r.json();
+          throw new Error(d.detail);
+        }
+        blob = await r.blob();
+        if (clipCache.current.size >= 30) clipCache.current.clear();
+        clipCache.current.set(cacheKey, blob);
       }
-      const blob = await r.blob();
       if (epoch !== viewEpoch.current) return;
       const url = URL.createObjectURL(blob);
       if (audioURL.current) URL.revokeObjectURL(audioURL.current);
       audioURL.current = url;
       audio.current?.pause();
-      const a = new Audio(url);
+      const a = voiceElement.current || new Audio();
+      voiceElement.current = a;
+      a.src = url;
       audio.current = a;
       a.onended = () => {
         setSpeaking(false);
@@ -1124,8 +725,14 @@ function App() {
       }
       setSpeaking(true);
     } catch (e) {
-      if (!controller.signal.aborted && epoch === viewEpoch.current)
-        setError((e as Error).message);
+      if (!controller.signal.aborted && epoch === viewEpoch.current) {
+        if (automatic) {
+          setAutoVoiceBlocked(true);
+          setToast(
+            "Voice paused. Tap Replay voice, or continue with subtitles.",
+          );
+        } else setError((e as Error).message);
+      }
     } finally {
       if (epoch === viewEpoch.current) setVoiceBusy(false);
     }
@@ -1205,7 +812,11 @@ function App() {
           ) : (
             <Volume2 size={15} />
           )}{" "}
-          {speaking ? "Stop voice" : "Listen · Timbre"}
+          {speaking
+            ? "Stop voice"
+            : voiceBusy
+              ? "Preparing voice…"
+              : "Replay voice"}
         </button>
         {room?.you.language !== "en" && (
           <button
@@ -1238,14 +849,14 @@ function App() {
                   <span className="little-line" /> A COOPERATIVE VOICE MYSTERY
                 </div>
                 <h1>
-                  Two worlds.
+                  Two detectives.
                   <br />
-                  <em>One truth.</em>
+                  <em>One big mystery.</em>
                 </h1>
                 <p>
-                  Your partner knows something you don’t.
+                  A midnight train. A vanished station master.
                   <br />
-                  Talk. Listen. Put the pieces together.
+                  Your friend has the other half of the story.
                 </p>
                 <div className="hero-actions">
                   <button
@@ -1256,7 +867,7 @@ function App() {
                       setSetup("create");
                     }}
                   >
-                    Start an investigation <ArrowUpRight size={19} />
+                    Play the mystery <ArrowUpRight size={19} />
                   </button>
                   <button
                     className="secondary"
@@ -1378,7 +989,7 @@ function App() {
                 setSetup("create");
               }}
             >
-              Explore solo rehearsal <ArrowUpRight size={14} />
+              Play solo · explore both roles <ArrowUpRight size={14} />
             </button>
           </footer>
         </div>
@@ -1563,7 +1174,7 @@ function App() {
     ? room.evidence.find((e) => e.id === clue.id) || clue
     : null;
   return (
-    <div className="game">
+    <div className={"game " + (room.status === "paused" ? "game-paused" : "")}>
       <header className="game-header">
         <button
           className="brand-button"
@@ -1577,6 +1188,19 @@ function App() {
           <strong>{room.case.title}</strong>
         </div>
         <div className="game-header-right">
+          <button
+            className={"sound-toggle " + (soundOn ? "enabled" : "")}
+            onClick={() => {
+              if (soundOn) {
+                setSoundOn(false);
+                audio.current?.pause();
+                setSpeaking(false);
+              } else void enableSound();
+            }}
+            aria-pressed={soundOn}
+          >
+            {soundOn ? "♫ Sound on" : "♫ Enable sound"}
+          </button>
           <span className={"connection " + (connected ? "online" : "")}>
             <i />
             {connected ? "Live room" : "Reconnecting"}
@@ -1614,6 +1238,18 @@ function App() {
             <X size={17} />
           </button>
         </div>
+      )}
+      {opening && room.status === "playing" && (
+        <Opening
+          blue={room.case.id === "blue-carbuncle"}
+          title={room.case.title}
+          onClose={() => setOpening(false)}
+          onBegin={(sound) => {
+            if (sound) void enableSound();
+            else setSoundOn(false);
+            setOpening(false);
+          }}
+        />
       )}
       {room.status === "lobby" ? (
         <main className="lobby">
@@ -1709,7 +1345,7 @@ function App() {
           <span className="eyebrow">CASE FILE {room.case.number} / CLOSED</span>
           <h1>
             {room.result?.success
-              ? "Two perspectives.\nOne truth."
+              ? "Case solved.\nBetter together."
               : "Every clue has a place."}
           </h1>
           <p className="ending-intro">
@@ -1858,7 +1494,15 @@ function App() {
                   {room.solo ? "SOLO REHEARSAL" : "COOPERATIVE INVESTIGATION"}
                 </span>
               </div>
-              <div className="scene-picture">
+              <div className="scene-picture" key={locationId}>
+                <div className="scene-chapter">
+                  CHAPTER{" "}
+                  {Math.max(
+                    1,
+                    room.locations.findIndex((l) => l.id === locationId) + 1,
+                  )}{" "}
+                  · EXPLORE THE SCENE
+                </div>
                 <LocationArt
                   id={locationId}
                   blue={room.case.id === "blue-carbuncle"}
@@ -1869,7 +1513,75 @@ function App() {
                   <h1>{activeLocation?.name}</h1>
                   <p>{activeLocation?.description}</p>
                 </div>
-                <span className="scene-label">ILLUSTRATED CASE SCENE</span>
+                <div
+                  className="scene-hotspots"
+                  aria-label="Things to investigate in this scene"
+                >
+                  {room.objects
+                    .filter((o) => o.location === locationId)
+                    .map((o, i) => (
+                      <button
+                        key={o.id}
+                        className={
+                          "scene-hotspot hotspot-" +
+                          i +
+                          (o.discovered ? " discovered" : "")
+                        }
+                        disabled={busy || room.status !== "playing"}
+                        onClick={() =>
+                          o.discovered
+                            ? setClue(
+                                room.evidence.find((e) => e.id === o.id) ||
+                                  null,
+                              )
+                            : inspect(o.id)
+                        }
+                      >
+                        <span>
+                          {o.discovered ? (
+                            <Check size={22} />
+                          ) : o.kind === "audio" ? (
+                            <Radio size={24} />
+                          ) : (
+                            <Search size={24} />
+                          )}
+                        </span>
+                        <strong>{o.title}</strong>
+                        <small>
+                          {o.discovered ? "Review clue" : "Investigate"}
+                        </small>
+                      </button>
+                    ))}
+                </div>
+                <div className="scene-cast">
+                  {room.characters
+                    .filter((c) => c.location === locationId)
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        className="scene-person"
+                        disabled={room.status !== "playing"}
+                        onClick={() => {
+                          soundEngine.current?.cue("tap");
+                          setWitness(c);
+                          setDialogue(c.initial);
+                          setAnswerSource("authored");
+                          setQuestion("");
+                        }}
+                      >
+                        <GameCharacter id={c.id} />
+                        <span>
+                          {c.name}
+                          <small>Tap to talk</small>
+                        </span>
+                      </button>
+                    ))}
+                </div>
+                <span className="scene-label">
+                  {soundOn
+                    ? "♫ ATMOSPHERE ON"
+                    : "ENABLE SOUND FOR THE FULL EXPERIENCE"}
+                </span>
               </div>
               <section className="leads">
                 <div className="leads-heading">
@@ -2182,18 +1894,46 @@ function App() {
           }}
         >
           <div className="conversation-person">
-            <Portrait id={currentWitness.id} />
+            <GameCharacter id={currentWitness.id} talking={speaking} />
             <div>
               <span className="eyebrow">{currentWitness.occupation}</span>
               <p>Ask about a lead. Present evidence when you have it.</p>
             </div>
           </div>
-          <blockquote className="dialogue">“{dialogue}”</blockquote>
+          <div className="speech-bubble" key={dialogue}>
+            <span className="speaker-name">{currentWitness.name}</span>
+            <blockquote className="dialogue">{dialogue}</blockquote>
+            <div className={"voice-wave " + (speaking ? "active" : "")}>
+              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <i key={i} />
+              ))}
+              <small>
+                {voiceBusy
+                  ? "Preparing their reply…"
+                  : speaking
+                    ? "Speaking…"
+                    : soundOn
+                      ? "Voice plays automatically"
+                      : "Subtitles · sound is off"}
+              </small>
+            </div>
+          </div>
           <div className="dialogue-source">
             {answerSource === "authored"
               ? "AUTHORED STORY DIALOGUE"
               : "GEMINI TOPIC INTERPRETATION · AUTHORED ANSWER"}
           </div>
+          {!soundOn && (
+            <button className="primary full" onClick={() => void enableSound()}>
+              <Headphones size={18} /> Enable automatic character voices
+            </button>
+          )}
+          {autoVoiceBlocked && (
+            <p className="smallprint">
+              Your browser or voice service paused playback. Replay below;
+              subtitles remain available.
+            </p>
+          )}
           {soundControls(dialogue, currentWitness.id)}
           {translation && (
             <div className="translation" lang={room.you.language}>

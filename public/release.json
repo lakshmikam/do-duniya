@@ -1,0 +1,10 @@
+{
+  "version": "animated-mystery-v2",
+  "features": [
+    "scene-hotspots",
+    "animated-characters",
+    "story-opening",
+    "automatic-voices",
+    "procedural-soundtrack"
+  ]
+}
