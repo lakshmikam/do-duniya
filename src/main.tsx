@@ -43,7 +43,7 @@ import { GameSound } from "./game/sound";
 import { VoiceChat } from "./game/VoiceChat";
 import { speechWav } from "./game/voiceCapture";
 import { PartnerLink } from "./game/PartnerLink";
-import { Exploration } from "./game/Exploration";
+import { InvestigationScene } from "./game/InvestigationScene";
 import type { RadioPacket } from "./game/PartnerRadio";
 import "./game/game.css";
 
@@ -83,8 +83,16 @@ type Room = {
   objective?: {
     phase: string;
     text: string;
+    chapter: number;
+    chapter_title: string;
+    team_question: string;
+    partner_task: string;
+    communication: string;
+    ready: boolean;
     action: {
       kind: string;
+      label: string;
+      topic?: string;
       target?: string;
       location?: string;
       evidence_id?: string;
@@ -92,6 +100,7 @@ type Room = {
     source_ids: string[];
   };
   code: string;
+  can_solve: boolean;
   case: Case;
   status: string;
   solo: boolean;
@@ -236,12 +245,6 @@ function Mark({ small = false }: { small?: boolean }) {
 function SceneArt({ blue = false }: { blue?: boolean; detail?: boolean }) {
   return <World blue={blue} />;
 }
-function LocationArt({ id, blue }: { id: string; blue: boolean }) {
-  return <World location={id} blue={blue} />;
-}
-function Portrait({ id }: { id: string }) {
-  return <GameCharacter id={id} />;
-}
 function Modal({
   title,
   children,
@@ -360,120 +363,88 @@ function Mission({
   token,
   onFollow,
   onSwitch,
+  onCommunicate,
+  busy,
 }: {
   room: Room;
   token: string;
   onFollow: () => void;
   onSwitch: () => void;
+  onCommunicate: () => void;
+  busy: boolean;
 }) {
-  const objective = room.objective!;
-  const [localized, setLocalized] = useState<{
-    key: string;
-    text: string;
-  } | null>(null);
-  const key = room.you.language + "|" + objective.text;
-  const labels: Record<string, string[]> = {
-    en: [
-      "Your next lead",
-      "Follow this lead",
-      "Share this clue",
-      "Compare the evidence",
-      "Build your theory",
-      "Switch perspective",
-    ],
-    hi: [
-      "आपका अगला सुराग",
-      "इस सुराग की जाँच करें",
-      "यह सुराग साझा करें",
-      "सबूतों की तुलना करें",
-      "अपना निष्कर्ष बनाएँ",
-      "दूसरा नज़रिया देखें",
-    ],
-    te: [
-      "మీ తదుపరి ఆధారం",
-      "ఈ ఆధారాన్ని అనుసరించండి",
-      "ఈ ఆధారాన్ని పంచుకోండి",
-      "ఆధారాలను పోల్చండి",
-      "మీ నిర్ధారణను రూపొందించండి",
-      "మరో కోణానికి మారండి",
-    ],
-    gu: [
-      "તમારી આગલી કડી",
-      "આ કડી તપાસો",
-      "આ પુરાવો શેર કરો",
-      "પુરાવાની સરખામણી કરો",
-      "તમારું તારણ બનાવો",
-      "બીજો દૃષ્ટિકોણ જુઓ",
-    ],
-  };
-  const l = labels[room.you.language] || labels.en;
-  useEffect(() => {
-    if (room.you.language === "en" || !room.providers.gemini) return;
-    const controller = new AbortController();
-    request(
-      `/rooms/${room.code}/translate`,
-      { text: objective.text },
-      token,
-      controller.signal,
-    )
-      .then((d) => setLocalized({ key, text: d.text }))
-      .catch(() => {});
-    return () => controller.abort();
-  }, [key, room.code, room.providers.gemini, token]);
-  const linked = objective.source_ids
-    .map((id) => room.evidence.find((e) => e.id === id))
-    .filter((e): e is Evidence => !!e);
+  const o = room.objective!,
+    partner = room.players.find((p) => p.id !== room.you.id);
   return (
-    <section
-      className={"mission-strip phase-" + objective.phase}
-      aria-label="Current story objective"
-    >
-      <div className="mission-icon">
-        <Compass size={23} />
-      </div>
-      <div className="mission-copy">
-        <span className="eyebrow">
-          {l[0]} · {objective.phase}
-        </span>
-        <p lang={localized?.key === key ? room.you.language : "en"}>
-          {localized?.key === key ? localized.text : objective.text}
-        </p>
-        {linked.length > 0 && (
-          <small className="connected-leads">
-            ↳ {linked.map((e) => e.title).join(" + ")}
-          </small>
-        )}
-      </div>
-      <div className="mission-actions">
-        <button
-          className="primary"
-          disabled={room.status !== "playing"}
-          onClick={onFollow}
-        >
-          {
-            l[
-              objective.action.kind === "share"
-                ? 2
-                : objective.action.kind === "board"
-                  ? 3
-                  : objective.action.kind === "theory"
-                    ? 4
-                    : 1
-            ]
-          }
-          <ArrowRight size={16} />
-        </button>
-        {room.solo && objective.phase === "coordinate" && (
+    <section className="team-guide" aria-label="What both players should do">
+      <span className="eyebrow">
+        STEP {o.chapter} OF 3 · {o.chapter_title}
+      </span>
+      <h2>
+        <StoryText text={o.team_question} room={room} token={token} />
+      </h2>
+      <div className="team-task-grid">
+        <div className="my-task">
+          <span className="eyebrow">YOUR JOB</span>
+          <p>
+            <StoryText text={o.text} room={room} token={token} />
+          </p>
           <button
-            className="secondary"
-            onClick={onSwitch}
-            disabled={room.status !== "playing"}
+            className="primary"
+            disabled={busy || room.status !== "playing"}
+            onClick={
+              room.solo && o.action.kind === "partner" ? onSwitch : onFollow
+            }
           >
-            {l[5]}
-            <RefreshCw size={14} />
+            {room.solo && o.action.kind === "partner" ? (
+              "Switch to the other role"
+            ) : (
+              <StoryText text={o.action.label} room={room} token={token} />
+            )}
+            <ArrowRight size={16} />
+          </button>
+        </div>
+        <div className="their-task">
+          <span className="eyebrow">
+            {room.solo
+              ? "OTHER ROLE"
+              : (partner?.name || "YOUR PARTNER") + "’S JOB"}
+          </span>
+          <p>
+            <StoryText text={o.partner_task} room={room} token={token} />
+          </p>
+          {room.solo && (
+            <button
+              className="secondary"
+              onClick={onSwitch}
+              disabled={room.status !== "playing"}
+            >
+              <RefreshCw size={15} />
+              Switch to the other role
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="talk-prompt">
+        <span className="eyebrow">WHAT TO TALK ABOUT</span>
+        <p>
+          “<StoryText text={o.communication} room={room} token={token} />”
+        </p>
+        {!room.solo && (
+          <button
+            className="text-button"
+            onClick={onCommunicate}
+            disabled={busy || room.status !== "playing"}
+          >
+            <Send size={14} />
+            Send this question to your partner
           </button>
         )}
       </div>
+      <p className="notebook-explainer">
+        <CheckCircle2 size={15} />
+        Clues you find appear in both notebooks automatically. No sharing step.
+      </p>
     </section>
   );
 }
@@ -491,7 +462,6 @@ function App() {
   const [ambienceVolume, setAmbienceVolume] = useState(65);
   const [autoVoiceBlocked, setAutoVoiceBlocked] = useState(false);
   const [voiceChatActive, setVoiceChatActive] = useState(false);
-  const [handoffNote, setHandoffNote] = useState("");
   const liveSocket = useRef<WebSocket | null>(null),
     radioReceiver = useRef<((packet: RadioPacket) => void) | null>(null);
   function sendLive(packet: object) {
@@ -532,7 +502,7 @@ function App() {
     ),
     [language, setLanguage] = useState("en"),
     [role, setRole] = useState("field"),
-    [timed, setTimed] = useState(true),
+    [timed, setTimed] = useState(false),
     [solo, setSolo] = useState(false);
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -548,9 +518,7 @@ function App() {
     [toast, setToast] = useState(""),
     [now, setNow] = useState(Date.now()),
     [syncAt, setSyncAt] = useState(Date.now()),
-    [note, setNote] = useState(""),
     [answers, setAnswers] = useState<Record<string, string>>({}),
-    [chosen, setChosen] = useState<string[]>([]),
     [explanation, setExplanation] = useState(""),
     [translation, setTranslation] = useState(""),
     [speaking, setSpeaking] = useState(false),
@@ -566,7 +534,6 @@ function App() {
   const voiceRequest = useRef<AbortController | null>(null),
     viewEpoch = useRef(0),
     audioURL = useRef("");
-  useEffect(() => setHandoffNote(""), [clue?.id]);
   function sync(r: Room) {
     const previous = receivedRoom.current;
     if (previous?.code === r.code && r.revision < previous.revision) return;
@@ -1386,22 +1353,21 @@ function App() {
               <li>
                 <strong>Investigate separately. Think together.</strong>
                 <p>
-                  Inspect leads, question witnesses and explicitly share useful
-                  evidence.
+                  Follow your task and question witnesses. Every clue either
+                  player finds appears in both notebooks automatically.
                 </p>
               </li>
               <li>
                 <strong>Agree on a reconstruction.</strong>
                 <p>
-                  Attach at least three shared clues. Both players approve the
-                  final theory.
+                  Choose your answers together. Your notebook is included
+                  automatically; both players confirm.
                 </p>
               </li>
             </ol>
             <div className="paper-note">
-              Use Partner Link to talk to each other inside the game. Enable
-              both radios, then hold to talk, or send a live message. Shared
-              clues appear in your conversation. Witness voice chat is separate.
+              The game suggests a question to ask your partner. Send it with one
+              tap, type your own message, or use the optional radio.
             </div>
           </Modal>
         )}
@@ -1409,7 +1375,7 @@ function App() {
     );
 
   const activeLocation = room.locations.find((l) => l.id === locationId);
-  const progress = room.shared_count / room.total_evidence;
+
   const elapsed =
     room.timer.elapsed +
     (room.status === "playing" ? Math.max(0, (now - syncAt) / 1000) : 0);
@@ -1436,6 +1402,27 @@ function App() {
           <strong>{room.case.title}</strong>
         </div>
         <div className="game-header-right">
+          {room.timer.enabled &&
+            ["playing", "paused"].includes(room.status) && (
+              <button
+                className="room-code"
+                title={
+                  room.status === "paused"
+                    ? "Resume the game"
+                    : "Pause the game for both players"
+                }
+                disabled={busy}
+                onClick={() => void act("pause")}
+              >
+                <Clock3 size={14} />
+                {timeLabel}
+                {room.status === "paused" ? (
+                  <Play size={13} />
+                ) : (
+                  <Pause size={13} />
+                )}
+              </button>
+            )}
           <button
             className={"sound-toggle " + (soundOn ? "enabled" : "")}
             onClick={() => {
@@ -1510,6 +1497,7 @@ function App() {
       {opening && room.status === "playing" && (
         <Opening
           blue={room.case.id === "blue-carbuncle"}
+          role={room.you.role}
           title={room.case.title}
           onClose={() => setOpening(false)}
           onBegin={(sound) => {
@@ -1734,7 +1722,7 @@ function App() {
                       {l.name}
                       <small>
                         {l.locked
-                          ? "Follow a shared lead"
+                          ? "Your partner will find the way here"
                           : "Available to explore"}
                       </small>
                     </span>
@@ -1744,11 +1732,7 @@ function App() {
               </nav>
               <div className="rail-bottom">
                 <Fingerprint size={34} />
-                <p>
-                  Look closely.
-                  <br />
-                  Someone else has the other half.
-                </p>
+                <p>New clues appear in both notebooks automatically.</p>
                 {room.solo && (
                   <button
                     className="text-button"
@@ -1768,28 +1752,40 @@ function App() {
                 <Mission
                   room={room}
                   token={token}
+                  busy={busy}
                   onFollow={() => {
                     const a = room.objective!.action;
-                    if (a.kind === "share")
-                      void act("share", { target: a.target });
-                    else if (a.kind === "assist") {
-                      setLocationId(a.location || "console");
-                      void act("assist", { target: a.target });
-                    } else if (a.kind === "partner") {
-                      setLocationId(a.location || "relay");
-                      window.dispatchEvent(new Event("partner-open"));
-                    } else if (a.kind === "location") {
+                    if (a.kind === "location") {
                       setLocationId(a.target!);
                       setWitness(null);
                       setClue(null);
+                      if (a.evidence_id) {
+                        const e = room.evidence.find(
+                          (e) => e.id === a.evidence_id,
+                        );
+                        if (e) setClue(e);
+                        else void inspect(a.evidence_id);
+                      }
                     } else if (a.kind === "character") {
                       const c = room.characters.find((c) => c.id === a.target);
                       if (c) {
                         setLocationId(c.location);
                         setWitness(c);
                         setDialogue(c.initial);
+                        setQuestion("");
                       }
+                    } else if (a.kind === "partner") {
+                      void act("message", {
+                        text: room.objective!.communication,
+                      });
+                      window.dispatchEvent(new Event("partner-open"));
                     } else setModal(a.kind === "theory" ? "theory" : "board");
+                  }}
+                  onCommunicate={() => {
+                    void act("message", {
+                      text: room.objective!.communication,
+                    });
+                    window.dispatchEvent(new Event("partner-open"));
                   }}
                   onSwitch={() => void act("switch")}
                 />
@@ -1814,40 +1810,18 @@ function App() {
                   )}
                 </p>
               </div>
-              <Exploration
+              <InvestigationScene
                 key={room.code + "|" + room.you.role + "|" + locationId}
                 location={locationId}
                 blue={room.case.id === "blue-carbuncle"}
                 playerName={room.you.name}
-                objects={[
-                  ...room.objects
-                    .filter((o) => o.location === locationId)
-                    .map((o) =>
-                      o.id === "found" && !o.discovered
-                        ? {
-                            ...o,
-                            title: room.cooperation?.service_gate
-                              ? "Release the store latch"
-                              : "Store latch · power needed",
-                          }
-                        : o,
-                    ),
-                  ...(room.case.id === "last-announcement" &&
-                  room.you.role === "archive" &&
-                  locationId === "console" &&
-                  room.evidence.some((e) => e.id === "route" && e.shared)
-                    ? [
-                        {
-                          id: "service-power",
-                          title: room.cooperation?.service_gate
-                            ? "Service gate · powered"
-                            : "Power the service gate",
-                          kind: "control",
-                          discovered: !!room.cooperation?.service_gate,
-                        },
-                      ]
-                    : []),
-                ]}
+                objects={room.objects
+                  .filter((o) => o.location === locationId)
+                  .map((o) =>
+                    o.id === "found" && !o.discovered
+                      ? { ...o, title: "Open the store door" }
+                      : o,
+                  )}
                 characters={room.characters.filter(
                   (c) => c.location === locationId,
                 )}
@@ -1858,10 +1832,6 @@ function App() {
                   !!(witness || clue || modal)
                 }
                 onInspect={(id) => {
-                  if (id === "service-power") {
-                    void act("assist", { target: "service_gate" });
-                    return;
-                  }
                   const o = room.objects.find((o) => o.id === id);
                   if (o?.discovered)
                     setClue(room.evidence.find((e) => e.id === id) || null);
@@ -1877,37 +1847,6 @@ function App() {
                   }
                 }}
               />
-              {room.case.id === "last-announcement" &&
-                room.evidence.some((e) => e.id === "route" && e.shared) && (
-                  <section className="cooperative-event">
-                    <span className="eyebrow">
-                      A JOB FOR BOTH INVESTIGATORS
-                    </span>
-                    <h3>Open the passage together</h3>
-                    <ol>
-                      <li className="done">Route shared by records</li>
-                      <li
-                        className={room.cooperation?.service_gate ? "done" : ""}
-                      >
-                        Records: power the service gate at the signal cabin
-                      </li>
-                      <li
-                        className={room.cooperation?.store_latch ? "done" : ""}
-                      >
-                        Field: reach the passage and release the store latch
-                      </li>
-                    </ol>
-                    <p>
-                      {room.cooperation?.store_latch
-                        ? "You opened the passage together. Compare what you learned with the shared records."
-                        : room.cooperation?.service_gate
-                          ? "Power is on. The field investigator can now release the latch from the passage."
-                          : "Use Partner Link to ask for power. The power stays on; there is no timing trap."}
-                      {room.solo &&
-                        " In solo rehearsal, switch perspectives to operate each side."}
-                    </p>
-                  </section>
-                )}
               {room.scene_audio
                 ?.filter((a) => a.location === locationId)
                 .map((a) => (
@@ -1941,141 +1880,6 @@ function App() {
                   </section>
                 ))}
             </main>
-            <aside className="case-sidebar">
-              <div className="clock-box">
-                <span className="eyebrow">
-                  {room.timer.enabled
-                    ? remaining < 0
-                      ? "OVERTIME · KEEP INVESTIGATING"
-                      : "INVESTIGATION CLOCK"
-                    : "TIME INVESTIGATING"}
-                </span>
-                <div className="clock-value">
-                  <span>{timeLabel}</span>
-                  <button
-                    className="icon"
-                    onClick={() => act("pause")}
-                    disabled={busy}
-                    aria-label={
-                      room.status === "paused"
-                        ? "Resume investigation"
-                        : "Pause investigation"
-                    }
-                  >
-                    {room.status === "paused" ? (
-                      <Play size={20} />
-                    ) : (
-                      <Pause size={20} />
-                    )}
-                  </button>
-                </div>
-                <p>
-                  {room.status === "paused"
-                    ? "Paused for both investigators."
-                    : room.timer.enabled
-                      ? "A little urgency. No abrupt endings."
-                      : "Take the time the case needs."}
-                </p>
-              </div>
-              <section className="sidebar-section">
-                <span className="eyebrow">THE QUESTION</span>
-                <h3>
-                  {room.case.id === "last-announcement"
-                    ? "Who borrowed the truth?"
-                    : "How did a jewel become dinner?"}
-                </h3>
-                <p>
-                  {room.case.id === "last-announcement"
-                    ? "Trace the announcement. Find Arun. Explain the missing consignment."
-                    : "Follow the bird. Connect the hotel theft. Test the accusation."}
-                </p>
-                <button
-                  className="text-button"
-                  onClick={() => setModal("brief")}
-                >
-                  Read case briefing <ArrowUpRight size={14} />
-                </button>
-              </section>
-              <section className="sidebar-section">
-                <div className="sidebar-label">
-                  <span className="eyebrow">SHARED EVIDENCE</span>
-                  <strong>
-                    {room.shared_count}
-                    <small>/{room.total_evidence}</small>
-                  </strong>
-                </div>
-                <div className="progress-track">
-                  <i style={{ width: `${progress * 100}%` }} />
-                </div>
-                <p>
-                  Your private discoveries stay private until you share them.
-                </p>
-                <button
-                  className="secondary full"
-                  onClick={() => setModal("board")}
-                >
-                  <Link2 size={16} /> Open evidence board
-                </button>
-              </section>
-              <section className="sidebar-section partner-section">
-                <span className="eyebrow">YOUR OTHER PERSPECTIVE</span>
-                {room.players
-                  .filter((p) => p.id !== room.you.id)
-                  .map((p) => (
-                    <div className="partner" key={p.id}>
-                      <span
-                        className={"avatar " + (p.connected ? "online" : "")}
-                      >
-                        {p.name[0]}
-                      </span>
-                      <span>
-                        <strong>{p.name}</strong>
-                        <small>
-                          {p.connected ? "Connected" : "Not connected"} ·{" "}
-                          {LANGS[p.language]}
-                        </small>
-                        {p.connected && (
-                          <small>
-                            {p.interviewing
-                              ? "Speaking with " + p.interviewing
-                              : p.scene || room.case.roles[p.role].name}
-                          </small>
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                {room.solo && (
-                  <p>
-                    Solo rehearsal. Switch perspectives to inspect the other
-                    half.
-                  </p>
-                )}
-                <div className="activity" aria-live="polite">
-                  {room.events
-                    .slice(-3)
-                    .reverse()
-                    .map((e) => (
-                      <p key={e.id}>
-                        <span />
-                        {e.text}
-                      </p>
-                    ))}
-                </div>
-              </section>
-              <button
-                className="text-button hint-button"
-                disabled={busy || room.status !== "playing"}
-                onClick={() => act("hint")}
-              >
-                <Lightbulb size={16} /> A nudge, not the answer
-              </button>
-              {room.hint && (
-                <div className="hint">
-                  <p>{room.hint}</p>
-                  {soundControls(room.hint)}
-                </div>
-              )}
-            </aside>
           </div>
           <footer className="game-toolbar">
             <span>
@@ -2087,18 +1891,20 @@ function App() {
             </span>
             <div>
               <button onClick={() => setModal("board")}>
-                <NotebookPen size={17} /> Evidence & notes{" "}
+                <NotebookPen size={17} /> Our notebook{" "}
                 <span>{room.evidence.length}</span>
               </button>
               <button
                 className="theory-button"
-                disabled={room.status !== "playing"}
+                disabled={room.status !== "playing" || !room.can_solve}
                 onClick={() => setModal("theory")}
               >
                 <Fingerprint size={17} />{" "}
                 {room.proposal
-                  ? "Review reconstruction"
-                  : "Build your reconstruction"}
+                  ? "Check your partner’s answers"
+                  : room.can_solve
+                    ? "Solve the case together"
+                    : "Find clues to unlock the ending"}
                 <ArrowRight size={16} />
               </button>
             </div>
@@ -2117,6 +1923,7 @@ function App() {
         <PartnerLink
           soundEnabled={soundOn}
           unlock={enableSound}
+          discussion={room.objective?.communication || "What did you find?"}
           you={room.you.id}
           peer={room.players.find((p) => p.id !== room.you.id)}
           messages={room.messages || []}
@@ -2176,33 +1983,16 @@ function App() {
               <p>Displayed above · matches the spoken passage.</p>
             </div>
           )}
-          {!shownClue.shared && !room.solo && (
-            <label className="handoff-note">
-              What should your partner check?
-              <textarea
-                maxLength={300}
-                value={handoffNote}
-                onChange={(e) => setHandoffNote(e.target.value)}
-                placeholder="Optional: tell them what connects to their side…"
-              />
-            </label>
-          )}
-          <button
-            className={"full " + (shownClue.shared ? "secondary" : "primary")}
-            disabled={busy || shownClue.shared || room.status !== "playing"}
-            onClick={async () => {
-              await act("share", { target: shownClue.id, text: handoffNote });
-              setToast("Evidence shared with your partner.");
-            }}
-          >
-            {shownClue.shared ? <Check size={17} /> : <Send size={17} />}{" "}
-            {shownClue.shared
-              ? "On your shared board"
-              : "Share with your partner"}
-          </button>
-          <p className="smallprint">
-            Sharing makes this clue visible to both investigators.
-          </p>
+          <div className="notebook-confirmation">
+            <CheckCircle2 size={19} />
+            <div>
+              <strong>Added to both players’ notebooks</strong>
+              <p>
+                Your partner can read this exact clue now. Talk about what it
+                changes in your explanation.
+              </p>
+            </div>
+          </div>
         </Modal>
       )}
       {witness && currentWitness && (
@@ -2435,8 +2225,8 @@ function App() {
           )}
           <div className="paper-note">
             Your perspective:{" "}
-            <strong>{room.case.roles[room.you.role].name}</strong>. Discover,
-            share, compare, then reconstruct the events together.
+            <strong>{room.case.roles[room.you.role].name}</strong>. Check your
+            task, discuss the question, then solve the case together.
           </div>
           <p className="smallprint">{room.case.credit}</p>
           {room.case.source && (
@@ -2507,14 +2297,10 @@ function App() {
         </Modal>
       )}
       {modal === "board" && (
-        <Modal
-          wide
-          title="The evidence between you."
-          onClose={() => setModal(null)}
-        >
+        <Modal wide title="Our notebook" onClose={() => setModal(null)}>
           <p className="muted">
-            Private discoveries are marked. Share what your partner needs; no
-            theory is automatically declared true.
+            Every clue either of you finds appears here automatically. Read it,
+            then discuss what it means.
           </p>
           <div className="board-grid">
             {room.evidence.map((e) => (
@@ -2527,13 +2313,15 @@ function App() {
                 }}
               >
                 <span className="eyebrow">
-                  {e.shared ? "SHARED EVIDENCE" : "YOUR PRIVATE DISCOVERY"}
+                  {e.shared ? "TEAM NOTEBOOK" : "TEAM NOTEBOOK"}
                 </span>
                 <h3>{e.title}</h3>
                 <p>{e.text}</p>
                 <span>
                   {e.shared ? <Link2 size={14} /> : <Fingerprint size={14} />}{" "}
-                  {e.shared ? "Both perspectives" : "Only you can see this"}{" "}
+                  {e.shared
+                    ? "Both players can read this"
+                    : "Both players can read this"}{" "}
                   <ArrowUpRight size={14} />
                 </span>
               </button>
@@ -2548,40 +2336,6 @@ function App() {
               </div>
             )}
           </div>
-          <section className="notes-section">
-            <h3>Working theories</h3>
-            <p className="smallprint">
-              These are your notes, not confirmed facts.
-            </p>
-            {room.notes.map((n) => (
-              <div className="note" key={n.id}>
-                <span className="eyebrow">{n.author}</span>
-                <p>{n.text}</p>
-              </div>
-            ))}
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const r = await act("note", { text: note });
-                if (r) setNote("");
-              }}
-            >
-              <label htmlFor="note">Add a shared theory</label>
-              <textarea
-                id="note"
-                maxLength={1200}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="What connects these discoveries?"
-              />
-              <button
-                className="secondary"
-                disabled={busy || !note.trim() || room.status !== "playing"}
-              >
-                <Send size={15} /> Add note
-              </button>
-            </form>
-          </section>
         </Modal>
       )}
       {modal === "theory" && (
@@ -2589,7 +2343,7 @@ function App() {
           wide
           title={
             room.proposal
-              ? "A theory needs two signatures."
+              ? "Check your partner’s answers."
               : "What really happened?"
           }
           onClose={() => setModal(null)}
@@ -2660,15 +2414,16 @@ function App() {
                 e.preventDefault();
                 const r = await act("propose", {
                   answers,
-                  evidence: chosen,
+                  evidence: room.evidence.map((e) => e.id),
                   text: explanation,
                 });
                 if (r?.status === "completed") setModal(null);
               }}
             >
               <p className="muted">
-                Build a complete explanation and attach at least three shared
-                clues. Your partner must agree before the reveal.
+                Choose your three answers. Your notebook is included
+                automatically. Your partner checks the answers before you reveal
+                the ending.
               </p>
               <label>
                 Who is responsible?
@@ -2707,7 +2462,7 @@ function App() {
                 </label>
               ))}
               <label>
-                Your reasoning
+                Why do you think so? (optional)
                 <textarea
                   value={explanation}
                   maxLength={1200}
@@ -2715,37 +2470,13 @@ function App() {
                   placeholder="Explain how the evidence fits together…"
                 />
               </label>
-              <fieldset>
-                <legend>Supporting evidence · choose at least three</legend>
-                <div className="evidence-choices">
-                  {room.evidence
-                    .filter((e) => e.shared)
-                    .map((e) => (
-                      <label className="check-label" key={e.id}>
-                        <input
-                          type="checkbox"
-                          checked={chosen.includes(e.id)}
-                          onChange={() =>
-                            setChosen(
-                              chosen.includes(e.id)
-                                ? chosen.filter((id) => id !== e.id)
-                                : [...chosen, e.id],
-                            )
-                          }
-                        />
-                        <span>{e.title}</span>
-                      </label>
-                    ))}
-                </div>
-                {room.shared_count < 3 && (
-                  <p className="smallprint">
-                    Share more discoveries before submitting a theory.
-                  </p>
-                )}
-              </fieldset>
+              <p className="paper-note">
+                Your notebook is included automatically. Choose your answers,
+                then let your partner check them.
+              </p>
               <button
                 className="primary full"
-                disabled={busy || chosen.length < 3}
+                disabled={busy || !room.can_solve}
               >
                 Submit for {room.solo ? "the reveal" : "your partner’s review"}
                 <ArrowRight size={17} />

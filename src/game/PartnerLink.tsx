@@ -33,6 +33,7 @@ type Props = {
   receiver: React.MutableRefObject<((packet: RadioPacket) => void) | null>;
   onMessage: (text: string) => Promise<boolean>;
   onClue: (id: string) => void;
+  discussion: string;
 };
 export function PartnerLink(props: Props) {
   const [open, setOpen] = useState(false),
@@ -84,20 +85,28 @@ export function PartnerLink(props: Props) {
         {open && <X size={17} />}
       </button>
       <div className="partner-dock-body" hidden={!open}>
-        <PartnerRadio
-          send={props.send}
-          receiver={props.receiver}
-          connected={props.connected}
-          enabled={props.enabled}
-          suppressed={props.suppressed}
-          partnerReady={!!props.peer?.radio && !props.peer?.interviewing}
-          partnerTalking={props.peer?.radio_talking}
-          soundEnabled={props.soundEnabled}
-          unlock={props.unlock}
-          partnerBusy={
-            props.peer?.connected ? props.peer.interviewing : undefined
-          }
-        />
+        <p className="partner-discussion">
+          <strong>What to discuss</strong>
+          <span>“{props.discussion}”</span>
+          <small>Type your answer below, or use the optional radio.</small>
+        </p>
+        <details className="optional-radio">
+          <summary>Voice radio (optional)</summary>
+          <PartnerRadio
+            send={props.send}
+            receiver={props.receiver}
+            connected={props.connected}
+            enabled={props.enabled}
+            suppressed={props.suppressed}
+            partnerReady={!!props.peer?.radio && !props.peer?.interviewing}
+            partnerTalking={props.peer?.radio_talking}
+            soundEnabled={props.soundEnabled}
+            unlock={props.unlock}
+            partnerBusy={
+              props.peer?.connected ? props.peer.interviewing : undefined
+            }
+          />
+        </details>
         <div
           className="partner-messages"
           role="log"
@@ -106,8 +115,8 @@ export function PartnerLink(props: Props) {
         >
           {props.messages.length === 0 ? (
             <p className="empty-partner">
-              Tell your partner what you are checking. Shared clues will appear
-              here for you both.
+              Ask the question above. New clues appear in both notebooks
+              automatically.
             </p>
           ) : (
             props.messages.slice(-15).map((m) => (
@@ -123,18 +132,11 @@ export function PartnerLink(props: Props) {
                   >
                     <Link2 size={15} />
                     <span>
-                      Shared clue<strong>{m.text}</strong>
+                      Added to both notebooks<strong>{m.text}</strong>
                     </span>
                   </button>
                 ) : (
                   <p>{m.text}</p>
-                )}
-                {m.kind === "clue" && (
-                  <p className="clue-followup">
-                    {m.comment ||
-                      "Next check: " +
-                        (m.prompt || "Compare this with your side.")}
-                  </p>
                 )}
               </article>
             ))

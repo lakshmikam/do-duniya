@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 const root = process.cwd(),
   scratch = path.join(root, ".local-tools", "presentation-check");
 await fs.mkdir(scratch, { recursive: true });
-for (const name of ["World", "Opening", "Exploration"]) {
+for (const name of ["World", "Opening", "InvestigationScene"]) {
   const source = await fs.readFile(
     path.join(root, "src/game", name + ".tsx"),
     "utf8",
@@ -24,7 +24,7 @@ for (const name of ["World", "Opening", "Exploration"]) {
       },
     })
     .outputText.replace('"./World"', '"./World.js"')
-    .replace('import "./exploration.css";', "");
+    .replace('import "./investigation-scene.css";', "");
   await fs.writeFile(path.join(scratch, name + ".js"), output);
 }
 const { World, GameCharacter } = await import(
@@ -33,13 +33,13 @@ const { World, GameCharacter } = await import(
 const { Opening } = await import(
   pathToFileURL(path.join(scratch, "Opening.js"))
 );
-const { Exploration } = await import(
-  pathToFileURL(path.join(scratch, "Exploration.js"))
+const { InvestigationScene } = await import(
+  pathToFileURL(path.join(scratch, "InvestigationScene.js"))
 );
 let checks = 0;
 for (const blue of [false, true]) {
   const walk = renderToStaticMarkup(
-    React.createElement(Exploration, {
+    React.createElement(InvestigationScene, {
       location: blue ? "street" : "platform",
       blue,
       objects: [{ id: "sample", title: "A permitted clue", kind: "object" }],
@@ -49,8 +49,9 @@ for (const blue of [false, true]) {
     }),
   );
   assert.ok(
-    walk.includes("Walk closer") &&
-      walk.includes("Explore without movement") &&
+    walk.includes("Tap to investigate") &&
+      !walk.includes("Run") &&
+      !walk.includes("Hide") &&
       walk.includes("A permitted clue"),
   );
   checks++;
@@ -75,7 +76,8 @@ for (const blue of [false, true]) {
     }),
   );
   assert.ok(
-    opening.includes('aria-modal="true"') && opening.includes("Continue"),
+    opening.includes('aria-modal="true"') &&
+      opening.includes("Start with sound"),
   );
   assert.ok(
     !opening.includes("Dev used a borrowed key") &&
@@ -92,7 +94,8 @@ for (const id of ["dev", "leela", "mira", "james"]) {
 }
 const source = await fs.readFile(path.join(root, "src/main.tsx"), "utf8");
 assert.ok(
-  source.includes("<Exploration") && source.includes("setSoundOn(false)"),
+  source.includes("<InvestigationScene") &&
+    source.includes("setSoundOn(false)"),
 );
 assert.ok(
   source.includes("clipCache.current") &&

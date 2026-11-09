@@ -2605,3 +2605,229 @@ h3 {
   background: #e8efe4;
   color: #253e4d;
 }
+.team-guide {
+  padding: 20px;
+  border: 1px solid #c5cfc4;
+  border-radius: 18px;
+  background: #f6f8ef;
+  color: #213d42;
+  margin-bottom: 20px;
+}
+.team-guide h2 {
+  font-family: "Libre Caslon Display", Georgia, serif;
+  font-size: 30px;
+  line-height: 1.2;
+  margin: 9px 0 18px;
+}
+.team-task-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.team-task-grid > div {
+  padding: 15px;
+  border-radius: 12px;
+}
+.my-task {
+  background: #e4eee4;
+}
+.their-task {
+  background: #eaf0ef;
+}
+.team-task-grid p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 8px 0 13px;
+}
+.team-task-grid button {
+  font-size: 13px;
+  white-space: normal;
+  text-align: left;
+}
+.talk-prompt {
+  margin-top: 15px;
+  border-top: 1px solid #cbd6ce;
+  padding-top: 14px;
+}
+.talk-prompt p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+.team-guide .notebook-explainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #546a65;
+  margin: 14px 0 0;
+}
+.notebook-explainer svg {
+  flex-shrink: 0;
+}
+.notebook-confirmation {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #eaf3e6;
+  color: #2a4d43;
+  border: 1px solid #bcd0b8;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 18px;
+}
+.notebook-confirmation svg {
+  flex-shrink: 0;
+}
+.notebook-confirmation strong {
+  font-size: 14px;
+}
+.notebook-confirmation p {
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 6px 0 0;
+}
+.partner-discussion {
+  background: #ffffff0b;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+.partner-discussion strong,
+.partner-discussion span,
+.partner-discussion small {
+  display: block;
+}
+.partner-discussion span {
+  margin: 6px 0;
+}
+.partner-discussion small {
+  font-size: 11px;
+  color: #b9d4d1;
+}
+.optional-radio {
+  margin: 8px 0 12px;
+  font-size: 12px;
+}
+.optional-radio summary {
+  cursor: pointer;
+  text-decoration: underline;
+  margin-bottom: 10px;
+}
+.investigation-layout {
+  grid-template-columns: 180px minmax(0, 1fr);
+  max-width: 1100px;
+  margin-inline: auto;
+}
+@media (max-width: 900px) {
+  .investigation-layout {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
+}
+@media (max-width: 650px) {
+  .investigation-layout {
+    display: block;
+  }
+  .team-guide {
+    padding: 15px;
+  }
+  .team-guide h2 {
+    font-size: 26px;
+  }
+  .team-task-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .team-task-grid > div {
+    padding: 12px;
+  }
+  .team-task-grid p {
+    font-size: 13px;
+    margin: 6px 0 10px;
+  }
+  .team-guide .notebook-explainer {
+    font-size: 11px;
+  }
+}
+.simple-opening .opening-copy {
+  max-width: 620px;
+}
+.opening-role {
+  border-left: 3px solid #f3cb80;
+  padding-left: 13px;
+  margin: 17px 0;
+}
+.opening-role strong {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f4dca5;
+}
+.opening-role p {
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 6px 0;
+}
+.opening-instructions {
+  padding-left: 19px;
+  font-size: 14px;
+  line-height: 1.9;
+  color: #f0e9d6;
+  margin: 15px 0 22px;
+}
+@media (max-width: 650px) {
+  .simple-opening .opening-copy {
+    padding-bottom: 18px;
+  }
+  .simple-opening h1 {
+    font-size: 36px;
+  }
+  .simple-opening .opening-copy > p {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .opening-instructions {
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .opening-role p {
+    font-size: 13px;
+  }
+  .simple-opening .opening-character {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+}
+.story-opening.simple-opening {
+  overflow-y: auto;
+  align-items: flex-start;
+}
+.simple-opening .opening-copy {
+  margin-block: auto;
+  padding-top: 85px;
+  padding-bottom: 35px;
+}
+.simple-opening .opening-close {
+  position: fixed;
+  z-index: 2;
+}
+.simple-opening .opening-character {
+  pointer-events: none;
+}
+@media (max-width: 650px) {
+  .simple-opening .opening-copy {
+    padding: 85px 22px 25px;
+  }
+  .simple-opening .opening-buttons {
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .simple-opening .opening-case {
+    left: 22px;
+    max-width: 70%;
+    line-height: 1.6;
+  }
+}
