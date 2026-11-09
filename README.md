@@ -65,7 +65,7 @@ cancels pending playback and translation display. A dispatched provider request
 may still charge even when the browser cancels waiting for it.
 
 English is the authored original. Ten further language/mix options are exposed
-as experimental, with on-demand Gemini translation and original text preserved.
+as experimental, with automatic Gemini story translation and original text preserved.
 The interface is English. No human multilingual review or performance benchmark
 has been completed. No language quality guarantee is implied by provider support.
 

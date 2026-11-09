@@ -1,10 +1,14 @@
 {
-  "version": "animated-mystery-v2",
+  "version": "connected-mystery-v3",
   "features": [
     "scene-hotspots",
     "animated-characters",
     "story-opening",
     "automatic-voices",
-    "procedural-soundtrack"
+    "procedural-soundtrack",
+    "suspense-atmosphere-volume",
+    "connected-role-objectives",
+    "automatic-matching-subtitles",
+    "translation-language-time-guards"
   ]
 }

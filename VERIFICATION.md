@@ -114,3 +114,29 @@ production build passed. No paid calls were made during these revision checks.
 Browser control remains disabled, so the new animation, visual layout, sound mix
 and mobile autoplay have NOT received a live browser walkthrough. These require
 user playtesting. See GAMEPLAY.md for implementation and known limitations.
+
+## Connected mystery and multilingual revision — November 9
+
+- 35 isolated backend tests passed, including both cases' suggested-lead
+  progression, visible-only clue references, timestamp preservation and rejection
+  of a different Indic script. Tests never use actual provider credentials.
+- Sound graph tests cover scene cleanup, one ambient loop, mute, volume clamping,
+  narration ducking and disposal. These checks do not listen to a device.
+- A bounded live provider check used fictional dialogue in English, Hindi,
+  Telugu and Gujarati. All eight free-form questions selected the expected
+  authored reply, including mixed-language negated alternatives. Each language
+  produced Timbre audio and a Prisma transcript of that synthetic audio.
+- The initial evidence checks exposed a Hindi response in Bengali script and a
+  Gujarati invalid response. Added script validation and a domain glossary.
+  A six-passage follow-up returned all three evidence translations with 08:00 and
+  23:45 unchanged; Telugu and Gujarati dialogue translations also succeeded.
+  One Hindi dialogue request failed upstream. Failures are surfaced with the
+  English original retained; no automatic retries or perfect-language claim.
+- Observed single calls: questions 0.70–1.31s, short cached-translation Timbre
+  generation 2.05–2.39s, synthetic Prisma round trips 0.41–0.89s. These small
+  integration samples do not benchmark latency or microphone accuracy.
+- Sanitized results are in ignored outputs/languages-v3.json and
+  outputs/translations-v3.json. The opt-in live script is scripts/check-languages.py.
+- Native-speaker review, real two-phone microphone testing and listening to the
+  new mix on a device remain outstanding. Browser automation is disabled, so
+  this revision was not visually or audibly verified in a live browser.

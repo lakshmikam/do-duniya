@@ -22,7 +22,9 @@ the user's test invitation. No invitation or credentials are recorded here.
 - Health endpoint: /api/health.
 - Runtime-only secrets: GEMINI_API_KEY, GNANI_API_KEY and TEST_ACCESS_CODE.
 - Reasoning model: gemini-3.5-flash-lite.
-- Hosted call ceilings: 60 globally per UTC day, 20 per room.
+- Hosted call ceilings: 240 globally per UTC day, 120 per room. Automatic story
+  translation and narration use these shared ceilings too. These are request
+  counts, not provider credit or currency guarantees; no automatic retry occurs.
 - Keys are never build arguments and are excluded from Git and Docker context.
 - The test access code is required for room creation and joining. Existing room
   passes remain valid if the invitation rotates. Never use an API key as an invite.

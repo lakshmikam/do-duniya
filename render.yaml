@@ -15,6 +15,6 @@ services:
       - key: TEST_ACCESS_CODE
         sync: false
       - key: PROVIDER_DAILY_LIMIT
-        value: "60"
+        value: "240"
       - key: ROOM_PROVIDER_LIMIT
-        value: "20"
+        value: "120"

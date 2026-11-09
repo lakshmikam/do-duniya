@@ -22,7 +22,34 @@ feedback. The mystery facts and cooperative server rules remain authored.
 - No downloaded commercial music, copied game characters or Subway Surfers assets.
   Its expressive, colourful energy was the user's reference, not a licence to copy.
 
-## Limits
+## Connected investigation and sound revision
+
+Each perspective now receives a state-derived next lead. Its action moves to a
+location, opens an available witness, shares a discovered clue or opens the board.
+When a partner's record is needed, the objective says which record connects the
+two trails. Solo rehearsal offers Switch perspective at that point. The guide
+does not send hidden clue text or propose the final solution.
+
+Atmosphere now combines rain/wind, sustained minor drones, slow minor notes and
+occasional thunder. Midrange tones are included for small speakers. The header
+has an independent atmosphere slider. The full briefing no longer starts a long,
+invisible voiceover that ducks this mix after the opening. Character/clue voices
+still play automatically after Start with sound; background volume ducks only
+while their audio plays.
+
+Dialogue and evidence now display the same translation that Timbre receives,
+with expandable English originals. Scene descriptions, available question labels
+and next objectives translate automatically too; general interface chrome remains
+mostly English. Native next-lead action labels cover Hindi, Telugu and Gujarati.
+Translations remain unreviewed drafts. Wrong Indic scripts or changed numeric
+times/quantities are rejected; failures retain the English original. The glossary
+distinguishes courier pickup paperwork from museum collections.
+
+Provider call ceilings were expanded for a multilingual playthrough while
+remaining bounded: 120 requests per room and 240 per server UTC day by default.
+Failed attempts count; cached translations/audio avoid repeated upstream calls.
+
+## Remaining limits
 
 This is a 2D point-and-click cooperative mystery, not a 3D runner or free-walking
 world. Buttons remain for navigation, conversation choices, accessibility and
