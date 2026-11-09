@@ -137,3 +137,15 @@ in-game. No endorsement or affiliation is claimed.
 
 Illustrations are project-native SVG. Icons: lucide-react (ISC). Fonts: Google
 Fonts DM Sans, IBM Plex Mono and Libre Caslon Display, with local system fallbacks.
+
+## Animated mystery presentation
+
+See GAMEPLAY.md for the scene-based redesign. Cases now open with a story sequence;
+choose Start with sound to enable automatic character voices, ambient audio and
+sound effects, or Play quietly for subtitles. Click characters and labelled clue
+markers inside the scene. Mute is in the header; Replay voice is optional recovery,
+not the normal next step. Browser/device playback policies can still require a
+second gesture. Existing provider caps apply to automatic narration too.
+
+`node scripts/check-presentation.mjs` checks the static component rendering without
+opening a browser or using model credits. It does not replace a visual playtest.

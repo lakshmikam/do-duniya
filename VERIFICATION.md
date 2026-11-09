@@ -100,3 +100,17 @@ External HTTP checks passed for /, /api/health and /api/cases (200, two cases).
 Room creation without an invitation returned 403. No paid inference was used for
 these hosted checks. Hosted two-player playthrough, actual phone microphone and
 hosted model calls are not yet verified. Render free-host limitations still apply.
+
+## Animated presentation revision — November 9
+
+Replaced dashboard-style scenes with colourful vector environments, animated
+characters, scene-placed clue interactions and a three-beat opening for each case.
+Added original procedural ambience/music and interaction cues. Following explicit
+Start with sound, character replies and clues request automatic Timbre playback;
+Replay and mute remain. Cached clips, cancellation and background-tab handling
+limit unnecessary work. Static artwork is memoized independently of the clock.
+31 backend tests and 14 component rendering checks passed. TypeScript and the
+production build passed. No paid calls were made during these revision checks.
+Browser control remains disabled, so the new animation, visual layout, sound mix
+and mobile autoplay have NOT received a live browser walkthrough. These require
+user playtesting. See GAMEPLAY.md for implementation and known limitations.
