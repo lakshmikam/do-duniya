@@ -92,3 +92,11 @@ for both services.
 
 Sanitized outputs: outputs/live-smoke.json and outputs/live-speech-te.json.
 The smoke script uses live credits only when explicitly invoked.
+
+## Render publication — November 9
+
+Live at https://do-duniya-test.onrender.com. The user completed Blueprint setup.
+External HTTP checks passed for /, /api/health and /api/cases (200, two cases).
+Room creation without an invitation returned 403. No paid inference was used for
+these hosted checks. Hosted two-player playthrough, actual phone microphone and
+hosted model calls are not yet verified. Render free-host limitations still apply.

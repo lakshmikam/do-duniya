@@ -7,13 +7,13 @@ No backend rewrite or fake hosted voice adapter is involved.
 
 ## Current state
 
-Local source is deployment-ready pending checks recorded in VERIFICATION.md.
-Private GitHub repository created: https://github.com/lakshmikam/do-duniya
-Seven descriptive commits were pushed in ordered groups on November 9.
-No hosted Render service has been created yet. Render connection is currently
-unavailable and browser access is disabled in Work settings. A container image has not been
-built locally because Docker is not installed; its server entry point is tested
-directly with the locally built frontend instead.
+Live test deployment: https://do-duniya-test.onrender.com
+Private repository: https://github.com/lakshmikam/do-duniya
+The user deployed the prepared Blueprint through Render on November 9.
+Verified HTTPS page, health and two-case catalog all returned HTTP 200.
+Unauthenticated room creation returned HTTP 403: invitation protection is active.
+Hosted two-device multiplayer and live provider calls remain to be tested using
+the user's test invitation. No invitation or credentials are recorded here.
 
 ## Hosting settings
 
