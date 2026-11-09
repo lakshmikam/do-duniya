@@ -8,8 +8,10 @@ No backend rewrite or fake hosted voice adapter is involved.
 ## Current state
 
 Local source is deployment-ready pending checks recorded in VERIFICATION.md.
-No hosted service, GitHub repository or remote push has been created yet.
-Render and GitHub account access is required. A container image has not been
+Private GitHub repository created: https://github.com/lakshmikam/do-duniya
+Seven descriptive commits were pushed in ordered groups on November 9.
+No hosted Render service has been created yet. Render connection is currently
+unavailable and browser access is disabled in Work settings. A container image has not been
 built locally because Docker is not installed; its server entry point is tested
 directly with the locally built frontend instead.
 
@@ -45,8 +47,8 @@ local daily call counter is a monetary billing cap or survives an ephemeral host
 
 User requested small, legible commits and pushes. They subsequently approved
 creating the private GitHub repository first, then deploying and verifying.
-No existing commits or Git remote were found. Proposed repository: do-duniya,
-private initially. Group the first history by purpose:
+The initially empty repository is now private at lakshmikam/do-duniya.
+Seven component commits exist; the list below was the planning breakdown. Group the first history by purpose:
 
 1. build: scaffold React and FastAPI development setup
 2. content: add original railway case and credited Doyle adaptation
