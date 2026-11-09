@@ -140,3 +140,23 @@ user playtesting. See GAMEPLAY.md for implementation and known limitations.
 - Native-speaker review, real two-phone microphone testing and listening to the
   new mix on a device remain outstanding. Browser automation is disabled, so
   this revision was not visually or audibly verified in a live browser.
+
+## Pause-to-send voice conversations — November 9
+
+40 backend tests passed, including private bounded follow-up memory, safe unknown
+answers being available to TTS/translation, unchanged evidence-gated confession,
+and actual voice/tag/speed request contracts. Seven unique cast voices and at
+least eight authored topic branches per character are checked.
+
+The opt-in live check returned valid WAV for Devansh, Kalpana, Vasudha, Prakash,
+Harshad, Yashraj and Avinash (English fictional introductions). Observed individual
+Timbre requests took 1.12–2.58s. Three Gemini questions selected the intended
+pickup, paperwork-procedure and defensive-reaction replies, including a follow-up.
+Observed calls took 0.89–0.95s. Results: ignored outputs/cast-v4.json. These checks
+establish provider responses, not subjective acting quality or end-to-end latency.
+
+Synthetic capture tests cover silence not uploading, short clicks being ignored,
+pause timing, single turn emission, long-speech cap, idle timeout and PCM WAV
+header/sample conversion. Static checks/build do not exercise microphone permission,
+browser autoplay, device acoustics or the complete repeated hands-free loop.
+Browser control is disabled; a real two-phone voice playtest remains outstanding.

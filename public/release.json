@@ -1,5 +1,5 @@
 {
-  "version": "connected-mystery-v3",
+  "version": "voice-conversations-v4",
   "features": [
     "scene-hotspots",
     "animated-characters",
@@ -9,6 +9,10 @@
     "suspense-atmosphere-volume",
     "connected-role-objectives",
     "automatic-matching-subtitles",
-    "translation-language-time-guards"
+    "translation-language-time-guards",
+    "pause-to-send-voice-chat",
+    "seven-distinct-character-voices",
+    "conversation-followup-memory",
+    "expanded-witness-stories"
   ]
 }

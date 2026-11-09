@@ -149,3 +149,28 @@ second gesture. Existing provider caps apply to automatic narration too.
 
 `node scripts/check-presentation.mjs` checks the static component rendering without
 opening a browser or using model credits. It does not replace a visual playtest.
+
+## Hands-free character conversations
+
+Open a witness and choose Start voice chat. Allow the microphone once, speak,
+then pause: Prisma transcribes the turn, Gemini selects an available story topic,
+and Timbre speaks the authored reply. The mic resumes after playback. No Send
+click is needed. Choose a longer pause if you want more thinking time, or use
+Interrupt · my turn to stop a spoken answer. End chat stops capture.
+
+Seven character voices have distinct delivery profiles. Forty-five additional
+authored exchanges broaden their lives, feelings and observations. Each player
+has private, bounded character-conversation memory for contextual follow-ups.
+The engine still checks evidence before enabling confessions. No free-form model
+is allowed to invent a new culprit, witness fact or ending.
+
+Pause detection and WAV encoding run locally. Only completed turns are uploaded.
+Capture pauses during playback and stops on closing, muting, game pause, hidden
+tab, idle timeout or errors. A turn is capped at 18 seconds; sessions pause after
+12 replies and can be restarted within the existing room/server call ceilings.
+This is turn-based voice conversation over REST, not a full-duplex streaming
+call. Automatic spoken interruption is not supported; the explicit Interrupt
+button is available. Real phone echo cancellation and pause timing need testing.
+
+`node scripts/check-voice-capture.mjs` runs synthetic pause/encoding checks.
+`python scripts/check-cast-live.py` is opt-in and consumes provider allowance.
