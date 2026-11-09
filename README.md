@@ -1,199 +1,72 @@
 # Do Duniya
 
-Two investigators. Different information. One authored truth.
+A two-player mystery with complementary roles, voice conversations and an automatic
+team notebook. One player investigates the scene; the other checks the records.
+Each sees a clear next task and a specific question to discuss with their partner.
 
-React/TypeScript/Vite client and FastAPI server. Two playable, fictional cases:
+Current playtest build: https://do-duniya-test.onrender.com (invitation protected).
 
-1. **The Last Announcement** — an original railway mystery.
-2. **The Blue Carbuncle** — a cooperative adaptation of Arthur Conan Doyle's 1892
-   story, with original dialogue and explicitly invented gameplay records.
+## Current game loop
 
-## Start locally
+- Tap a person or clue to investigate; movement and opening happen together.
+- Discovered clues appear in both players’ notebooks automatically.
+- Ask the suggested partner question through text or optional radio.
+- Agree on three answers; the notebook is included automatically.
 
-Python 3.11+ and Node 22+ recommended. In this project directory:
+The confusing manual-sharing step, extra power-switch puzzle, hiding/keepsakes,
+separate activity sidebar and final evidence checklist have been removed. The
+current controls are documented in [GAMEPLAY.md](GAMEPLAY.md).
+
+## Development
+
+Python 3.11; Node 22. Copy `.env.example` to `.env` privately. Do not commit keys.
 
 ```powershell
-python -m pip install -r requirements-dev.txt
-npm install
-```
-
-Run these in separate terminals:
-
-```powershell
+pip install -r requirements-dev.txt
+npm ci
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8011
 ```
 
-```powershell
-npm run dev
-```
+In another terminal, run `npm run dev`, then open http://127.0.0.1:5175.
+Use two tabs/devices for two roles, or explicit solo rehearsal to switch roles.
+Phones need an HTTPS deployment for microphone use. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
-Open http://127.0.0.1:5175. Create a room in one browser tab. Join using its code
-in a second tab, or use a separate browser profile. Each tab has its own session
-pass. The default server is localhost-only: another laptop cannot reach it until
-an appropriate network hosting arrangement is configured. The shared test deployment
-is linked in DEPLOYMENT.md. Partner Link includes live messages and a hold-to-talk radio.
+## Models and game rules
 
-Solo rehearsal explicitly lets one person switch roles; it is not an AI partner.
-Rooms persist in runtime/game.sqlite3. Passes persist in per-tab sessionStorage;
-refresh reconnects the same pass. Leaving clears that device's pass. Rooms expire
-after 24 hours; physical database deletion is not yet scheduled. Use one backend
-worker: the current live-room registry and event delivery are process-local.
+Gnani Prisma v3.0 transcribes speech with available scene vocabulary and prior
+microphone context. Gnani Timbre v3.0 provides character voices and announcements.
+Gemini routes questions to permitted authored answers and translates available
+story text. It never chooses the culprit or invents the case truth.
 
-## Models and secrets
+The server controls clues, role access, unlocks and the final two-player decision.
+Unfound evidence remains hidden. Discovered evidence is intentionally visible to
+both authenticated players. Model calls are bounded and serialized for Gnani;
+failed calls do not silently substitute fabricated model outputs. English authored
+buttons complete both mysteries without API calls.
 
-Copy .env.example to .env and add keys privately. Restart the backend afterward.
-Never put keys in frontend code or commit .env.
-
-- GEMINI_API_KEY, GEMINI_MODEL: free-form question routing and requested passage
-  translation. Model is configurable; default gemini-3.5-flash-lite. Account/model
-  availability must be checked with the user's credentials. No Evon adapter is
-  used in this release.
-- GNANI_API_KEY, or separate GNANI_PRISMA_KEY / GNANI_TIMBRE_KEY: Prisma v3.0
-  transcription and Timbre v3.0 narration. Character voices use Avinash/Shivani.
-- PROVIDER_DAILY_LIMIT / ROOM_PROVIDER_LIMIT: shared request ceilings reserved
-  before calls, including failed attempts. These are call limits, not guaranteed
-  monetary caps. No automatic retry. Translation plus narration can use two calls.
-
-Without keys the mysteries remain playable through **authored English topics**.
-They are visibly labelled authored, never represented as model inference. Voice
-controls and free-form questions are disabled when their keys are absent.
-
-Gemini 3.5 Flash-Lite and the shared Gnani key were live-smoke-tested November 9;
-see VERIFICATION.md for scope and failures. `python scripts/live_smoke.py` makes
-live requests and uses credits; ordinary tests do not. Closing a conversation
-cancels pending playback and translation display. A dispatched provider request
-may still charge even when the browser cancels waiting for it.
-
-English is the authored original. Ten further language/mix options are exposed
-as experimental, with automatic Gemini story translation and original text preserved.
-The interface is English. No human multilingual review or performance benchmark
-has been completed. No language quality guarantee is implied by provider support.
-
-Open http://127.0.0.1:5175/device-preview.html for a narrow browser-frame preview.
-This tests responsive layout, not physical-phone microphone behaviour. A separate
-phone needs an appropriate hosted HTTPS endpoint for voice access; the current
-localhost URL belongs to the laptop, not to the phone.
-
-Manual microphone questions are limited to 20 seconds, converted locally to mono PCM WAV,
-then explicitly transcribed on stop. Hands-free mode sends on a configurable pause. The transcript remains editable before it
-is sent as a witness question. Closing the witness discards active recording.
-
-## Story and multiplayer integrity
-
-- Full truth, clues and reveal conditions live on the server.
-- Each player's snapshot contains only their accessible evidence and shared clues.
-- Both players ready before starting; both approve a reconstruction before ending.
-- Only discovered evidence can be shared; only shared evidence can support a theory.
-- Required testimony must be earned through the permitted conversation.
-- Gemini receives currently permitted topic labels and that player’s recent authorized
-  answers when interpreting a question, not unrevealed case truth. It chooses an allowed topic; authored text
-  supplies the answer. Unknown questions do not create new facts.
-- Final claims are selected explicitly. Prose reasoning is stored for the players,
-  not falsely described as automatically graded.
-- Timer uses server elapsed time, pauses for both players and continues in overtime.
-- State-changing requests have bounded idempotency history; HTTP and WebSocket
-  events carry revisions. Server state persists in SQLite.
-
-## Shared HTTPS testing
-
-The root Dockerfile builds React and runs `backend.production:app`, serving the
-game and API together. `render.yaml` prepares a free, invite-only Render test
-instance. This packaging has not yet been published. See DEPLOYMENT.md for
-account requirements, verification steps and ephemeral-storage limitations.
-
-Production secrets belong in the hosting dashboard, not Git. Configure
-TEST_ACCESS_CODE to require an invitation when creating or joining a room.
-The existing local development URL remains unchanged.
-
-## Add a case
-
-Add a package to backend/cases.py and register it in CASES. It supplies its own
-roles, locations, evidence, witnesses, permitted topics, gates, conclusion choices,
-solution, timeline, hints and attribution. The engine does not need a railway
-scenario. validate_cases checks references; each package also needs a playthrough
-test and human story review. Larger deployments should replace process-local
-rooms with shared state and event delivery, add room-creation abuse limits, and
-implement proper retention before public exposure.
-
-## Checks
+## Verification
 
 ```powershell
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
 python -m pytest tests -q
 npm run build
+node scripts/check-presentation.mjs
+node scripts/check-voice-capture.mjs
+node scripts/check-sound.mjs
 ```
 
-Tests use synthetic game interactions and mock interpretation, not paid models.
-See VERIFICATION.md for actual checks and outstanding limitations.
+Paid-provider scripts are opt-in. See [VERIFICATION.md](VERIFICATION.md) for actual
+checks and device-testing limitations. Raw keys, microphone audio and local output
+files are excluded from Git. The shared test service remains invitation protected.
 
-## Credits
+## Credits and design research
 
-The Blue Carbuncle source: https://www.gutenberg.org/ebooks/1661
-Project Gutenberg identifies that edition as public domain in the USA. The 1892
-story is by Arthur Conan Doyle (1859–1930). This game uses fresh dialogue and
-illustrations, not modern adaptations, audiobook recordings or translations.
-Our cooperative records and conclusion differ from the original and are credited
-in-game. No endorsement or affiliation is claimed.
+The Last Announcement is original fiction. The Blue Carbuncle adapts Arthur Conan
+Doyle’s 1892 story with fresh dialogue and a different conclusion, credited in the
+game. Source: https://www.gutenberg.org/ebooks/1661. Artwork is original SVG; icons
+use lucide-react (ISC); font credits remain in the source stylesheets.
 
-Illustrations are project-native SVG. Icons: lucide-react (ISC). Fonts: Google
-Fonts DM Sans, IBM Plex Mono and Libre Caslon Display, with local system fallbacks.
-
-## Animated mystery presentation
-
-See GAMEPLAY.md for the scene-based redesign. Cases now open with a story sequence;
-choose Start with sound to enable automatic character voices, ambient audio and
-sound effects, or Play quietly for subtitles. Click characters and labelled clue
-markers inside the scene. Mute is in the header; Replay voice is optional recovery,
-not the normal next step. Browser/device playback policies can still require a
-second gesture. Existing provider caps apply to automatic narration too.
-
-`node scripts/check-presentation.mjs` checks the static component rendering without
-opening a browser or using model credits. It does not replace a visual playtest.
-
-## Hands-free character conversations
-
-Open a witness and choose Start voice chat. Allow the microphone once, speak,
-then pause: Prisma transcribes the turn, Gemini selects an available story topic,
-and Timbre speaks the authored reply. The mic resumes after playback. No Send
-click is needed. Choose a longer pause if you want more thinking time, or use
-Interrupt · my turn to stop a spoken answer. End chat stops capture.
-
-Seven character voices have distinct delivery profiles. Forty-five additional
-authored exchanges broaden their lives, feelings and observations. Each player
-has private, bounded character-conversation memory for contextual follow-ups.
-The engine still checks evidence before enabling confessions. No free-form model
-is allowed to invent a new culprit, witness fact or ending.
-
-Pause detection and WAV encoding run locally. Only completed turns are uploaded.
-Capture pauses during playback and stops on closing, muting, game pause, hidden
-tab, idle timeout or errors. A turn is capped at 18 seconds; sessions pause after
-12 replies and can be restarted within the existing room/server call ceilings.
-This is turn-based voice conversation over REST, not a full-duplex streaming
-call. Automatic spoken interruption is not supported; the explicit Interrupt
-button is available. Real phone echo cancellation and pause timing need testing.
-
-`node scripts/check-voice-capture.mjs` runs synthetic pause/encoding checks.
-`python scripts/check-cast-live.py` is opt-in and consumes provider allowance.
-
-## Cooperative exploration
-
-The scene is now walkable: approach evidence and people, run, use optional cover,
-or open direct interaction controls for accessibility. Partner Link adds live
-messages, clue handoffs and server-arbitrated hold-to-talk radio. In the train
-case, the records investigator powers a service gate and the field investigator
-releases the separate store latch. The mystery remains solvable with authored
-English controls and no model calls. See GAMEPLAY.md for controls and limits.
-
-Design research covered the distinct-role communication of
-[We Were Here](https://www.wewereheregames.com/games/we-were-here),
-[Keep Talking and Nobody Explodes](https://keeptalkinggame.com/),
-[Operation: Tango](https://store.steampowered.com/app/1335790/Operation_Tango/), and
-[Tick Tock](https://www.othertales.com/tick-tock). The resulting principle is
-reciprocal agency, with original case events, dialogue and art. Three specialist
-agent reviews and three actual Gemini design critiques informed this revision;
-no Claude or Kimi service was accessed. These reviews do not predict contest wins.
-
-Provider context fields follow the official
-[Prisma REST contract](https://docs.gnani.ai/api/STT/speech-to-text).
-`python scripts/check-voice-turns.py` performs opt-in synthetic speech turns in
-English, Hindi, Telugu and Gujarati. It uses live provider allowance.
+Research included We Were Here, Keep Talking and Nobody Explodes, Operation: Tango
+and Tick Tock. Those are design references, not sources of copied assets or scripts.
+The current revision follows direct player feedback prioritizing clarity over the
+previous feature-heavy prototype.

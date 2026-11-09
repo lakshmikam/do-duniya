@@ -192,3 +192,26 @@ Browser control is disabled; a real two-phone voice playtest remains outstanding
   No security/privacy settings were changed. Actual device appearance, microphone
   permissions, mobile autoplay, acoustic echo, radio sound quality and long-session
   playability remain unverified. Do not describe them as visually/audibly approved.
+
+## Simpler cooperative flow — November 10
+
+The latest playtest reported confusion about role coordination and manual evidence
+sharing. This revision deliberately supersedes the prior private/shared-clue UX.
+
+- Discovered clues now enter both players' notebooks immediately. Unfound clues,
+  unreached locations and unrevealed testimony stay protected. Existing rooms
+  migrate only already-discovered clues; no unearned evidence is added.
+- Guided traces complete both cases through role-specific next actions without
+  any share or power action. The common question, each player's job and a
+  concrete partner question are present in every step. Final answers include the
+  discovered notebook automatically, with both-player confirmation retained.
+- Tests cover automatic synchronization, no extra electrical gate, legacy room
+  compatibility, hidden evidence protection, and preventing simultaneous answer
+  drafts from overwriting a teammate's proposal. Existing radio and speech tests
+  remain applicable; provider adapters were not changed in this revision.
+- The introduction is one screen. Tap-to-investigate replaces the previous
+  walk/run/hide interaction controls. Keepsakes, scenery reactions, manual clue
+  handoffs, the activity sidebar and final evidence checklist are removed from
+  the active flow. Radio is optional beside text discussion prompts.
+- Visual checks are static component renders and compilation. Browser control
+  remains disabled; the simpler presentation is not claimed as device-playtested.

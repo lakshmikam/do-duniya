@@ -1,24 +1,13 @@
 {
-  "version": "cooperative-world-v5",
+  "version": "simple-coop-v6",
   "features": [
-    "scene-hotspots",
-    "animated-characters",
-    "story-opening",
-    "automatic-voices",
-    "procedural-soundtrack",
-    "suspense-atmosphere-volume",
-    "connected-role-objectives",
-    "automatic-matching-subtitles",
-    "translation-language-time-guards",
-    "pause-to-send-voice-chat",
-    "seven-distinct-character-voices",
-    "conversation-followup-memory",
-    "expanded-witness-stories",
-    "walk-run-cover-exploration",
-    "optional-keepsakes-and-scenery-reactions",
-    "live-partner-radio-and-messages",
-    "reciprocal-service-gate",
-    "scene-aware-prisma-context",
-    "in-world-announcement-replay"
+    "clear-team-tasks",
+    "suggested-partner-questions",
+    "automatic-team-notebook",
+    "tap-to-investigate",
+    "single-screen-introduction",
+    "optional-partner-radio",
+    "hands-free-character-voices",
+    "notebook-included-in-final-answers"
   ]
 }
