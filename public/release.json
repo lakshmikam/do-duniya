@@ -1,5 +1,5 @@
 {
-  "version": "voice-conversations-v4",
+  "version": "cooperative-world-v5",
   "features": [
     "scene-hotspots",
     "animated-characters",
@@ -13,6 +13,12 @@
     "pause-to-send-voice-chat",
     "seven-distinct-character-voices",
     "conversation-followup-memory",
-    "expanded-witness-stories"
+    "expanded-witness-stories",
+    "walk-run-cover-exploration",
+    "optional-keepsakes-and-scenery-reactions",
+    "live-partner-radio-and-messages",
+    "reciprocal-service-gate",
+    "scene-aware-prisma-context",
+    "in-world-announcement-replay"
   ]
 }

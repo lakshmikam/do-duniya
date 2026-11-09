@@ -30,8 +30,8 @@ npm run dev
 Open http://127.0.0.1:5175. Create a room in one browser tab. Join using its code
 in a second tab, or use a separate browser profile. Each tab has its own session
 pass. The default server is localhost-only: another laptop cannot reach it until
-an appropriate network hosting arrangement is configured. No public deployment
-or built-in voice call is included. Use an existing call for partner conversation.
+an appropriate network hosting arrangement is configured. The shared test deployment
+is linked in DEPLOYMENT.md. Partner Link includes live messages and a hold-to-talk radio.
 
 Solo rehearsal explicitly lets one person switch roles; it is not an AI partner.
 Rooms persist in runtime/game.sqlite3. Passes persist in per-tab sessionStorage;
@@ -74,8 +74,8 @@ This tests responsive layout, not physical-phone microphone behaviour. A separat
 phone needs an appropriate hosted HTTPS endpoint for voice access; the current
 localhost URL belongs to the laptop, not to the phone.
 
-Microphone questions are limited to 20 seconds, converted locally to mono PCM WAV,
-then explicitly transcribed on stop. The transcript remains editable before it
+Manual microphone questions are limited to 20 seconds, converted locally to mono PCM WAV,
+then explicitly transcribed on stop. Hands-free mode sends on a configurable pause. The transcript remains editable before it
 is sent as a witness question. Closing the witness discards active recording.
 
 ## Story and multiplayer integrity
@@ -85,8 +85,8 @@ is sent as a witness question. Closing the witness discards active recording.
 - Both players ready before starting; both approve a reconstruction before ending.
 - Only discovered evidence can be shared; only shared evidence can support a theory.
 - Required testimony must be earned through the permitted conversation.
-- Gemini receives only currently permitted topic labels when interpreting a
-  question, not the full solution. It chooses an allowed topic; authored text
+- Gemini receives currently permitted topic labels and that player’s recent authorized
+  answers when interpreting a question, not unrevealed case truth. It chooses an allowed topic; authored text
   supplies the answer. Unknown questions do not create new facts.
 - Final claims are selected explicitly. Prose reasoning is stored for the players,
   not falsely described as automatically graded.
@@ -174,3 +174,26 @@ button is available. Real phone echo cancellation and pause timing need testing.
 
 `node scripts/check-voice-capture.mjs` runs synthetic pause/encoding checks.
 `python scripts/check-cast-live.py` is opt-in and consumes provider allowance.
+
+## Cooperative exploration
+
+The scene is now walkable: approach evidence and people, run, use optional cover,
+or open direct interaction controls for accessibility. Partner Link adds live
+messages, clue handoffs and server-arbitrated hold-to-talk radio. In the train
+case, the records investigator powers a service gate and the field investigator
+releases the separate store latch. The mystery remains solvable with authored
+English controls and no model calls. See GAMEPLAY.md for controls and limits.
+
+Design research covered the distinct-role communication of
+[We Were Here](https://www.wewereheregames.com/games/we-were-here),
+[Keep Talking and Nobody Explodes](https://keeptalkinggame.com/),
+[Operation: Tango](https://store.steampowered.com/app/1335790/Operation_Tango/), and
+[Tick Tock](https://www.othertales.com/tick-tock). The resulting principle is
+reciprocal agency, with original case events, dialogue and art. Three specialist
+agent reviews and three actual Gemini design critiques informed this revision;
+no Claude or Kimi service was accessed. These reviews do not predict contest wins.
+
+Provider context fields follow the official
+[Prisma REST contract](https://docs.gnani.ai/api/STT/speech-to-text).
+`python scripts/check-voice-turns.py` performs opt-in synthetic speech turns in
+English, Hindi, Telugu and Gujarati. It uses live provider allowance.

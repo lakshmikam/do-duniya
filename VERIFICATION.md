@@ -160,3 +160,35 @@ pause timing, single turn emission, long-speech cap, idle timeout and PCM WAV
 header/sample conversion. Static checks/build do not exercise microphone permission,
 browser autoplay, device acoustics or the complete repeated hands-free loop.
 Browser control is disabled; a real two-phone voice playtest remains outstanding.
+
+## Cooperative exploration revision — November 10
+
+- 52 backend regressions passed. Both mysteries complete using authored controls
+  without provider calls. Tests cover the two-role service gate and physical
+  latch, private testimony remaining private until shared, witness-earned Baker
+  reaction, and reopening an incorrect deduction without losing evidence.
+- Seven partner-transport tests exercise actual local test WebSockets: opt-in
+  receivers, radio ownership, competing claims, expiry, release/disconnect,
+  forged sender rejection, room isolation and no audio retention. Shared messages
+  and clue handoffs are bounded to 40; private clue references cannot be sent.
+- Sound lifecycle, calibrated continuous-noise rejection, brief questions, pause
+  detection, 16k PCM encoding and 16 static presentation renders passed. The
+  movement agent's source-derived 1% floor-grid check found all nine target
+  positions and both cover approaches reachable. These are not browser playtests.
+- Four LIVE synthetic complete voice turns passed: English, Hindi, Telugu and
+  Gujarati, using actual Timbre audio -> Prisma transcription -> Gemini routing.
+  Every route selected the expected permitted authored response. Speech used
+  verified scene keyterms/topic and the actual preceding clip transcript context.
+  Results: ignored outputs/voice-turns-v5.json. No raw microphone/audio was saved.
+- Individual calls in that small sample: Timbre 1.61–3.00s (non-English includes
+  translation), Prisma 0.36–0.62s, Gemini routing 0.81–1.55s. No latency/accuracy
+  benchmark or native-language review is implied. The Shubham announcement voice
+  also returned valid WAV with 4.54s of fictional speech.
+- Three specialist agents researched existing games, implemented exploration and
+  audited the game. Three actual Gemini design-review calls returned structured
+  critiques. No Claude/Kimi endpoint was accessed. The research informed original
+  mechanics and corrected bugs; it does not establish novelty or award prospects.
+- Browser availability was rechecked: Work settings still disable browser use.
+  No security/privacy settings were changed. Actual device appearance, microphone
+  permissions, mobile autoplay, acoustic echo, radio sound quality and long-session
+  playability remain unverified. Do not describe them as visually/audibly approved.
