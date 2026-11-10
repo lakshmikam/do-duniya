@@ -262,6 +262,8 @@ def view(r, p):
             else []
         ),
         "hint": r.get("hint"),
+        "coach_hints": r.get("coach_hints", []),
+        "hints_remaining": max(0, 3 - len(r.get("coach_hints", []))),
         "proposal": r["proposal"],
         "questions": c["questions"],
         "suspects": c["suspects"],
@@ -666,9 +668,29 @@ async def live(ws: WebSocket, code: str):
     pid = None
     try:
         hello = await asyncio.wait_for(ws.receive_json(), 10)
+        if not isinstance(hello, dict):
+            await ws.close(code=1008)
+            return
         with LOCK:
             r, p = member(code, str(hello.get("token", "")))
             pid = p["id"]
+        previous = SOCKETS.get(r["code"], {}).get(pid)
+        if previous and previous[0] is not ws:
+            if not hello.get("take_over"):
+                await ws.send_json({"type": "session_in_use", "room": view(r, p)})
+                await ws.close(code=4009)
+                return
+            # An explicit move wins; the previous tab must not reconnect in a loop.
+            SOCKETS.setdefault(r["code"], {})[pid] = (ws, p["token"])
+            try:
+                await asyncio.wait_for(
+                    previous[0].send_json({"type": "session_moved"}), 0.3
+                )
+                await previous[0].close(code=4008)
+            except (RuntimeError, WebSocketDisconnect, asyncio.TimeoutError):
+                pass
+            if RADIO_FLOORS.get(r["code"], {}).get("owner") == pid:
+                RADIO_FLOORS.pop(r["code"], None)
         SOCKETS.setdefault(r["code"], {})[pid] = (ws, p["token"])
         p["radio"] = False
         p["interviewing"] = ""
@@ -1019,6 +1041,7 @@ def accessible_texts(r, p):
             texts.update(a["text"] for a in allowed_responses(r, p, ch))
     if r.get("hint"):
         texts.add(r["hint"])
+    texts.update(h["text"] for h in r.get("coach_hints", []))
     guidance = next_objective(case(r), r, p)
     texts.update(
         guidance[key]
@@ -1178,6 +1201,8 @@ async def speech(code: str, body: Speak, authorization: str = Header(default="")
     )
     if body.character == "station_announcer":
         profile = {"voice": "Shubham", "speed": 0.97, "tag": "<slow>"}
+    if body.character == "case_guide":
+        profile = {"voice": "Chetana", "speed": 0.96, "tag": ""}
     voice = profile["voice"]
     ch = next((c for c in case(r)["characters"] if c["id"] == body.character), None)
     expressive = (
@@ -1280,7 +1305,7 @@ async def transcribe(
         fail("Use a mono PCM WAV recording of 25 seconds or less.")
     visible = view(r, p)
     ch = next((c for c in visible["characters"] if c["id"] == character), None)
-    if character and not ch:
+    if character and not ch and character not in ["case_guide", "partner"]:
         fail("That character is not available to this investigator.", 403)
     language = (
         "hi-IN,en-IN"
@@ -1328,3 +1353,11 @@ async def transcribe(
         )
         save(r)
     return {"text": text, "provider": "prisma-v3.0"}
+
+
+import sys
+from .case_coach import install as install_coach
+from .partner_language import install as install_partner_language
+
+install_coach(app, sys.modules[__name__])
+install_partner_language(app, sys.modules[__name__])

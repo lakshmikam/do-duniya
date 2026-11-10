@@ -46,6 +46,8 @@ import { PartnerLink } from "./game/PartnerLink";
 import { InvestigationScene } from "./game/InvestigationScene";
 import type { RadioPacket } from "./game/PartnerRadio";
 import "./game/game.css";
+import { CaseNotebook } from "./game/CaseNotebook";
+import "./game/mystery.css";
 
 type Case = {
   id: string;
@@ -162,6 +164,8 @@ type Room = {
     evidence_id?: string;
     time: number;
   }[];
+  coach_hints?: { id: string; text: string; by?: string }[];
+  hints_remaining?: number;
   hint: string | null;
   revision: number;
   proposal: {
@@ -376,78 +380,37 @@ function Mission({
   const o = room.objective!,
     partner = room.players.find((p) => p.id !== room.you.id);
   return (
-    <section className="team-guide" aria-label="What both players should do">
+    <section className="team-guide case-status" aria-label="Case progress">
       <span className="eyebrow">
-        STEP {o.chapter} OF 3 · {o.chapter_title}
+        CHAPTER {o.chapter} / 3 · {o.chapter_title}
       </span>
       <h2>
         <StoryText text={o.team_question} room={room} token={token} />
       </h2>
-      <div className="team-task-grid">
-        <div className="my-task">
-          <span className="eyebrow">YOUR JOB</span>
-          <p>
-            <StoryText text={o.text} room={room} token={token} />
-          </p>
-          <button
-            className="primary"
-            disabled={busy || room.status !== "playing"}
-            onClick={
-              room.solo && o.action.kind === "partner" ? onSwitch : onFollow
-            }
-          >
-            {room.solo && o.action.kind === "partner" ? (
-              "Switch to the other role"
-            ) : (
-              <StoryText text={o.action.label} room={room} token={token} />
-            )}
-            <ArrowRight size={16} />
-          </button>
-        </div>
-        <div className="their-task">
-          <span className="eyebrow">
-            {room.solo
-              ? "OTHER ROLE"
-              : (partner?.name || "YOUR PARTNER") + "’S JOB"}
-          </span>
-          <p>
-            <StoryText text={o.partner_task} room={room} token={token} />
-          </p>
-          {room.solo && (
-            <button
-              className="secondary"
-              onClick={onSwitch}
-              disabled={room.status !== "playing"}
-            >
-              <RefreshCw size={15} />
-              Switch to the other role
-            </button>
-          )}
-        </div>
+      <div className="role-strip">
+        <span>
+          <strong>You</strong> · {room.case.roles[room.you.role]?.subtitle}
+        </span>
+        <span>
+          <strong>{partner?.name || "Other perspective"}</strong> ·{" "}
+          {
+            room.case.roles[room.you.role === "field" ? "archive" : "field"]
+              ?.subtitle
+          }
+        </span>
       </div>
-      <div className="talk-prompt">
-        <span className="eyebrow">WHAT TO TALK ABOUT</span>
-        <p>
-          “<StoryText text={o.communication} room={room} token={token} />”
-        </p>
-        {!room.solo && (
-          <button
-            className="text-button"
-            onClick={onCommunicate}
-            disabled={busy || room.status !== "playing"}
-          >
-            <Send size={14} />
-            Send this question to your partner
-          </button>
-        )}
-      </div>
-      <p className="notebook-explainer">
-        <CheckCircle2 size={15} />
-        Clues you find appear in both notebooks automatically. No sharing step.
-      </p>
+      <button className="text-button" onClick={onCommunicate} disabled={busy}>
+        Talk to your partner <ArrowRight size={15} />
+      </button>
+      {room.solo && (
+        <button className="text-button" onClick={onSwitch}>
+          Switch perspective <RefreshCw size={15} />
+        </button>
+      )}
     </section>
   );
 }
+
 function App() {
   const [cases, setCases] = useState<Case[]>([]),
     [selected, setSelected] = useState(0),
@@ -462,6 +425,12 @@ function App() {
   const [ambienceVolume, setAmbienceVolume] = useState(65);
   const [autoVoiceBlocked, setAutoVoiceBlocked] = useState(false);
   const [voiceChatActive, setVoiceChatActive] = useState(false);
+  const [sessionConflict, setSessionConflict] = useState<
+      "occupied" | "moved" | null
+    >(null),
+    [connectionEpoch, setConnectionEpoch] = useState(0);
+  const takeOver = useRef(false),
+    snapshotFingerprint = useRef("");
   const liveSocket = useRef<WebSocket | null>(null),
     radioReceiver = useRef<((packet: RadioPacket) => void) | null>(null);
   function sendLive(packet: object) {
@@ -509,7 +478,7 @@ function App() {
     [connected, setConnected] = useState(false),
     [locationId, setLocationId] = useState(""),
     [modal, setModal] = useState<
-      "board" | "theory" | "brief" | "settings" | null
+      "board" | "theory" | "brief" | "settings" | "coach" | null
     >(null),
     [clue, setClue] = useState<Evidence | null>(null),
     [witness, setWitness] = useState<Character | null>(null),
@@ -525,6 +494,9 @@ function App() {
     [recording, setRecording] = useState(false),
     [recordSeconds, setRecordSeconds] = useState(0),
     [voiceBusy, setVoiceBusy] = useState(false);
+  const [coachBusy, setCoachBusy] = useState(false),
+    [coachReply, setCoachReply] = useState(""),
+    [coachQuestion, setCoachQuestion] = useState("");
   const audio = useRef<HTMLAudioElement | null>(null),
     media = useRef<MediaRecorder | null>(null),
     stream = useRef<MediaStream | null>(null),
@@ -537,9 +509,16 @@ function App() {
   function sync(r: Room) {
     const previous = receivedRoom.current;
     if (previous?.code === r.code && r.revision < previous.revision) return;
+    const fingerprint = JSON.stringify({
+      ...r,
+      timer: { ...r.timer, elapsed: 0 },
+    });
+    if (snapshotFingerprint.current === fingerprint) return;
+    snapshotFingerprint.current = fingerprint;
     receivedRoom.current = r;
     setRoom(r);
     setSyncAt(Date.now());
+    setNow(Date.now());
   }
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -582,15 +561,36 @@ function App() {
       );
       liveSocket.current = socket;
       socket.onopen = () => {
-        socket?.send(JSON.stringify({ token }));
-        setConnected(true);
+        socket?.send(JSON.stringify({ token, take_over: takeOver.current }));
       };
       socket.onmessage = (e) => {
         try {
           const packet = JSON.parse(e.data);
+          if (
+            packet.type === "session_in_use" ||
+            packet.type === "session_moved"
+          ) {
+            stopped = true;
+            setConnected(false);
+            setOpening(false);
+            setSessionConflict(
+              packet.type === "session_moved" ? "moved" : "occupied",
+            );
+            cancelRecording();
+            voiceRequest.current?.abort();
+            audio.current?.pause();
+            setSpeaking(false);
+            if (packet.room) sync(packet.room);
+            socket?.close();
+            return;
+          }
           if (packet.type === "radio" || packet.type === "radio_control")
             radioReceiver.current?.(packet);
-          else sync(packet);
+          else if (packet.code && packet.you) {
+            takeOver.current = false;
+            setConnected(true);
+            sync(packet);
+          }
         } catch {}
       };
       socket.onclose = () => {
@@ -600,6 +600,7 @@ function App() {
     };
     connect();
     const poll = setInterval(() => {
+      if (stopped) return;
       request("/rooms/" + room.code, undefined, token)
         .then(sync)
         .catch(() => {});
@@ -611,7 +612,7 @@ function App() {
       socket?.close();
       liveSocket.current = null;
     };
-  }, [room?.code, token]);
+  }, [room?.code, token, connectionEpoch]);
   useEffect(() => {
     if (room && connected)
       sendLive({
@@ -629,7 +630,9 @@ function App() {
   ]);
   useEffect(() => {
     const t = setInterval(() => {
-      setNow(Date.now());
+      const current = receivedRoom.current;
+      if (current?.timer.enabled && current.status === "playing")
+        setNow(Date.now());
       if (media.current?.state === "recording")
         setRecordSeconds(Math.floor((Date.now() - recordStart.current) / 1000));
     }, 500);
@@ -672,11 +675,11 @@ function App() {
   ]);
   useEffect(() => {
     const running = room?.status === "playing";
-    if (running && room.code !== openingSeen) {
+    if (running && connected && !sessionConflict && room.code !== openingSeen) {
       setOpening(true);
       setOpeningSeen(room.code);
     }
-  }, [room?.status, room?.code, openingSeen]);
+  }, [room?.status, room?.code, openingSeen, connected, sessionConflict]);
   useEffect(() => {
     if (!soundEngine.current) return;
     soundEngine.current.setMuted(!soundOn);
@@ -804,6 +807,8 @@ function App() {
     setRecording(false);
   }
   function leave() {
+    setSessionConflict(null);
+    snapshotFingerprint.current = "";
     audio.current?.pause();
     cancelRecording();
     receivedRoom.current = null;
@@ -1781,12 +1786,9 @@ function App() {
                       window.dispatchEvent(new Event("partner-open"));
                     } else setModal(a.kind === "theory" ? "theory" : "board");
                   }}
-                  onCommunicate={() => {
-                    void act("message", {
-                      text: room.objective!.communication,
-                    });
-                    window.dispatchEvent(new Event("partner-open"));
-                  }}
+                  onCommunicate={() =>
+                    window.dispatchEvent(new Event("partner-open"))
+                  }
                   onSwitch={() => void act("switch")}
                 />
               )}
@@ -1827,6 +1829,7 @@ function App() {
                 )}
                 disabled={
                   busy ||
+                  !!sessionConflict ||
                   opening ||
                   room.status !== "playing" ||
                   !!(witness || clue || modal)
@@ -1921,6 +1924,9 @@ function App() {
       )}
       {!room.solo && room.status === "playing" && !opening && (
         <PartnerLink
+          code={room.code}
+          token={token}
+          language={room.you.language}
           soundEnabled={soundOn}
           unlock={enableSound}
           discussion={room.objective?.communication || "What did you find?"}
@@ -1928,11 +1934,24 @@ function App() {
           peer={room.players.find((p) => p.id !== room.you.id)}
           messages={room.messages || []}
           connected={connected}
-          enabled={room.status === "playing"}
+          enabled={!sessionConflict && room.status === "playing"}
           suppressed={voiceChatActive || speaking}
           send={sendLive}
           receiver={radioReceiver}
-          onMessage={async (text) => !!(await act("message", { text }))}
+          onMessage={async (text) => {
+            try {
+              const r = await request(
+                `/rooms/${room.code}/partner-message`,
+                { text },
+                token,
+              );
+              sync(r);
+              return true;
+            } catch (e) {
+              setError((e as Error).message);
+              return false;
+            }
+          }}
           onClue={(id) => {
             const e = room.evidence.find((e) => e.id === id);
             if (e) {
@@ -2076,7 +2095,7 @@ function App() {
             character={currentWitness.id}
             name={currentWitness.name}
             language={room.you.language}
-            enabled={room.status === "playing"}
+            enabled={!sessionConflict && room.status === "playing"}
             soundEnabled={soundOn}
             available={
               room.providers.prisma &&
@@ -2297,45 +2316,160 @@ function App() {
         </Modal>
       )}
       {modal === "board" && (
-        <Modal wide title="Our notebook" onClose={() => setModal(null)}>
+        <CaseNotebook
+          caseTitle={room.case.title}
+          caseNumber={room.case.number}
+          evidence={room.evidence}
+          messages={room.messages}
+          hints={room.coach_hints}
+          hintsRemaining={room.hints_remaining ?? 3}
+          onClose={() => setModal(null)}
+          onHint={() => {
+            setCoachReply("");
+            setModal("coach");
+          }}
+          onRead={(e) => {
+            setModal(null);
+            setClue(e);
+          }}
+        />
+      )}
+      {modal === "coach" && (
+        <Modal title="The case assistant" onClose={() => setModal(null)}>
           <p className="muted">
-            Every clue either of you finds appears here automatically. Read it,
-            then discuss what it means.
+            A nudge when you need one. Your team has {room.hints_remaining ?? 3}{" "}
+            of 3 hints left. Every hint stays in your notebook.
           </p>
-          <div className="board-grid">
-            {room.evidence.map((e) => (
-              <button
-                className={"board-card " + (e.shared ? "shared" : "")}
-                key={e.id}
-                onClick={() => {
-                  setModal(null);
-                  setClue(e);
-                }}
-              >
-                <span className="eyebrow">
-                  {e.shared ? "TEAM NOTEBOOK" : "TEAM NOTEBOOK"}
-                </span>
-                <h3>{e.title}</h3>
-                <p>{e.text}</p>
-                <span>
-                  {e.shared ? <Link2 size={14} /> : <Fingerprint size={14} />}{" "}
-                  {e.shared
-                    ? "Both players can read this"
-                    : "Both players can read this"}{" "}
-                  <ArrowUpRight size={14} />
-                </span>
-              </button>
-            ))}
-            {!room.evidence.length && (
-              <div className="empty-state">
-                <Search size={32} />
-                <h3>Start by looking closely.</h3>
-                <p>
-                  Inspect a lead in your current location. It will appear here.
-                </p>
-              </div>
-            )}
+          <div className="evidence-paper">
+            <p>
+              {coachReply ||
+                "Ask about your next lead, your partner’s role, or the evidence you have found."}
+            </p>
           </div>
+          {coachReply && (
+            <button
+              className="secondary"
+              disabled={voiceBusy}
+              onClick={() => {
+                const last = room.coach_hints?.at(-1);
+                if (last) void listen(last.text, "case_guide");
+              }}
+            >
+              Hear this hint
+            </button>
+          )}
+          <VoiceChat
+            code={room.code}
+            token={token}
+            character="case_guide"
+            name="Case assistant"
+            language={room.you.language}
+            endpoint="coach"
+            turnLimit={1}
+            enabled={!sessionConflict && room.status === "playing"}
+            available={
+              (room.hints_remaining ?? 3) > 0 &&
+              !coachBusy &&
+              room.providers.prisma &&
+              room.providers.gemini &&
+              room.providers.timbre
+            }
+            soundEnabled={soundOn}
+            unlock={enableSound}
+            onActive={setVoiceChatActive}
+            onSpeaking={setSpeaking}
+            onReply={(text, translated) => setCoachReply(translated || text)}
+            onRefresh={() => {
+              void request(`/rooms/${room.code}`, undefined, token)
+                .then(sync)
+                .catch((e) => setError(e.message));
+            }}
+          />
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setCoachBusy(true);
+              try {
+                const result = await request(
+                  `/rooms/${room.code}/coach`,
+                  coachQuestion.trim()
+                    ? { question: coachQuestion }
+                    : { topic: "nudge" },
+                  token,
+                );
+                setCoachReply(result.text);
+                if (room.you.language !== "en") {
+                  try {
+                    const translated = await request(
+                      `/rooms/${room.code}/translate`,
+                      { text: result.text },
+                      token,
+                    );
+                    setCoachReply(translated.text);
+                  } catch {
+                    setError(
+                      "Hint saved. Translation unavailable; showing the English original.",
+                    );
+                  }
+                }
+                setCoachQuestion("");
+                sync(await request(`/rooms/${room.code}`, undefined, token));
+              } catch (e) {
+                setError((e as Error).message);
+              } finally {
+                setCoachBusy(false);
+              }
+            }}
+          >
+            <label>
+              What are you stuck on?
+              <input
+                value={coachQuestion}
+                maxLength={500}
+                onChange={(e) => setCoachQuestion(e.target.value)}
+                placeholder="Optional question"
+              />
+            </label>
+            <button
+              className="primary full"
+              disabled={
+                coachBusy ||
+                voiceChatActive ||
+                (room.hints_remaining ?? 3) === 0
+              }
+            >
+              {coachBusy ? "Finding a nudge…" : "Use one hint"}
+            </button>
+          </form>
+        </Modal>
+      )}
+      {sessionConflict && (
+        <Modal
+          title={
+            sessionConflict === "moved"
+              ? "This player moved to another tab"
+              : "This player is already open"
+          }
+          onClose={() => {}}
+        >
+          <p>
+            One tab controls each player. Keep one tab for you and let your
+            partner join the room with their own name.
+          </p>
+          <button
+            className="primary full"
+            onClick={() => {
+              takeOver.current = true;
+              setSessionConflict(null);
+              setOpeningSeen(room.code);
+              setConnectionEpoch((n) => n + 1);
+            }}
+          >
+            Use this tab instead
+          </button>
+          <button className="secondary full" onClick={leave}>
+            Return to casebook
+          </button>
         </Modal>
       )}
       {modal === "theory" && (

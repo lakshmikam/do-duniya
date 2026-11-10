@@ -12,6 +12,8 @@ type Phase =
   | "thinking"
   | "speaking";
 type Props = {
+  endpoint?: "ask" | "coach";
+  turnLimit?: number;
   code: string;
   token: string;
   character: string;
@@ -131,7 +133,7 @@ export function VoiceChat(props: Props) {
       setPhase("thinking");
       const reply = await (
         await post(
-          "ask",
+          latest.current.endpoint || "ask",
           {
             character: latest.current.character,
             question: heard.text.slice(0, 500),
@@ -177,10 +179,12 @@ export function VoiceChat(props: Props) {
       latest.current.onSpeaking(false);
       turnCount.current++;
       setTurns(turnCount.current);
-      if (turnCount.current >= 12) {
+      if (turnCount.current >= (latest.current.turnLimit || 12)) {
         stop();
         setError(
-          "Chat paused after 12 turns. Start again to continue; your evidence stays.",
+          latest.current.endpoint === "coach"
+            ? "Hint saved in your notebook."
+            : "Chat paused after 12 turns. Start again to continue; your evidence stays.",
         );
         return;
       }
@@ -366,7 +370,9 @@ export function VoiceChat(props: Props) {
                 Finish my turn
               </button>
             )}
-            <small>{turns}/12 turns</small>
+            <small>
+              {turns}/{props.turnLimit || 12} turns
+            </small>
           </>
         )}
       </div>

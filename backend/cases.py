@@ -77,7 +77,7 @@ TRAIN = {
     "evidence": [
         clue(
             "seal",
-            "The cut seal",
+            "Crate seal",
             "The museum crate’s seal was cut cleanly. The emergency axe is untouched. This was not storm damage.",
             "field",
             "platform",
@@ -107,7 +107,7 @@ TRAIN = {
         ),
         clue(
             "broadcast",
-            "A borrowed announcement",
+            "Announcement log",
             "At 23:47 the console played evacuation file E-14 locally. It was not a live message. The line “keep the luggage aisle clear” belongs to an old drill.",
             "archive",
             "console",
@@ -122,7 +122,7 @@ TRAIN = {
         ),
         clue(
             "docket",
-            "A collection that wasn’t",
+            "Pickup approval",
             "The museum authorized collection for 08:00 tomorrow. No overnight courier or emergency transfer was approved. Dev’s handwritten 23:45 instruction is not countersigned.",
             "archive",
             "records",
@@ -136,7 +136,7 @@ TRAIN = {
         ),
         clue(
             "clock",
-            "The corrected clock",
+            "Platform clock",
             "The platform clock is four minutes slow. Console times use the radio clock. Witness memories of the clock are not precise alibis.",
             "archive",
             "records",

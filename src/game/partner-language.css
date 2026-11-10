@@ -1,0 +1,109 @@
+.partner-language-tools {
+  padding: 12px;
+  margin: 10px 0 15px;
+  border: 1px solid #739d9d66;
+  border-radius: 12px;
+  background: #ffffff07;
+}
+.partner-language-tools > p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 10px;
+  color: #f4e2b2;
+}
+.partner-language-tools small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #bcd5d3;
+  margin-top: 7px;
+}
+.partner-language-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.partner-language-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 39px;
+  border: 1px solid #9dc7ba;
+  background: #cee4d6;
+  color: #183c3e;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.partner-language-actions button[aria-pressed="true"] {
+  background: #ffe0a1;
+  border-color: #ffe0a1;
+  color: #463622;
+}
+.partner-language-actions button:disabled {
+  opacity: 0.55;
+}
+.partner-relay-status {
+  display: block;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #ffe2ab;
+  margin: 10px 0 4px;
+}
+.partner-original {
+  font-size: 11px;
+  line-height: 1.6;
+  margin-top: 8px;
+  color: #bad5d4;
+}
+.partner-original summary {
+  cursor: pointer;
+  text-decoration: underline;
+}
+.partner-original p {
+  color: #d6e3df;
+}
+.partner-translation-warning {
+  display: block;
+  line-height: 1.6;
+  color: #ffe0a1 !important;
+  margin: 8px 0;
+}
+.partner-read {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #d1e8dd;
+  padding: 6px 0;
+  font-size: 11px;
+  text-decoration: underline;
+}
+.partner-translation-note {
+  display: block;
+  font-size: 10px;
+  color: #bcd5d3;
+  line-height: 1.6;
+  margin-top: 6px;
+}
+.partner-mode-note {
+  font-size: 12px;
+  color: #bad5d4;
+  line-height: 1.6;
+}
+.partner-relay-error {
+  font-size: 12px;
+  line-height: 1.7;
+  border-left: 2px solid #ffe0a1;
+  padding-left: 10px;
+  color: #ffe8be;
+}
+.partner-language-tools button:focus-visible,
+.partner-read:focus-visible,
+.partner-original summary:focus-visible {
+  outline: 3px solid #ffd48a;
+  outline-offset: 2px;
+}

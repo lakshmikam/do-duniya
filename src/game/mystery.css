@@ -1,0 +1,187 @@
+/* Final art direction: lamplight, ink and a readable case desk. */
+:root {
+  --serif: "Libre Caslon Display", Georgia, serif;
+  --accent: #dfba77;
+}
+.game {
+  background: #141e29;
+  color: #eee9df;
+}
+.game h1,
+.game h2,
+.game h3,
+.brand,
+.game-title strong {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.game-header {
+  height: auto;
+  min-height: 76px;
+  padding: 14px 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #101923;
+  border-bottom: 1px solid #39424b;
+}
+.game-header-right {
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.game-header .brand {
+  color: #eed2a4;
+}
+.game-title {
+  min-width: 0;
+}
+.game-title strong {
+  font-size: 23px;
+}
+.game button {
+  min-height: 44px;
+}
+.game button:focus-visible,
+.game input:focus-visible,
+.game select:focus-visible {
+  outline: 3px solid #e7c58c;
+  outline-offset: 3px;
+}
+.game .primary {
+  background: #daba83;
+  color: #20282c;
+  border: 1px solid #daba83;
+  border-radius: 7px;
+  box-shadow: none;
+  font-weight: 650;
+  transform: none;
+}
+.game .primary:hover {
+  background: #efd29f;
+  transform: none;
+}
+.game .secondary {
+  border-radius: 7px;
+  box-shadow: none;
+  transform: none;
+}
+.scene-column {
+  min-width: 0;
+}
+.scene-summary h1 {
+  color: #f1e8d9;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.15;
+}
+.scene-summary p {
+  color: #b8c3c8;
+}
+.scene-topline {
+  color: #bfc9ca;
+}
+.team-guide.case-status {
+  background: #1b2833;
+  border: 1px solid #40505a;
+  border-radius: 9px;
+  padding: 18px 22px;
+  box-shadow: none;
+  color: #ede6d8;
+}
+.case-status h2 {
+  color: #f0e7d8;
+  font-size: clamp(22px, 3vw, 30px);
+  margin: 8px 0 14px;
+}
+.case-status .eyebrow {
+  color: #d4b984;
+}
+.role-strip {
+  display: flex;
+  gap: 10px 26px;
+  flex-wrap: wrap;
+  color: #bcc9cc;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.role-strip strong {
+  color: #f0e7d8;
+}
+.case-status .text-button {
+  color: #e4c28d;
+  margin-top: 8px;
+}
+.game .scene-actions,
+.game .game-footer {
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.game input,
+.game textarea {
+  max-width: 100%;
+}
+.game .modal {
+  max-height: 90dvh;
+  overflow: auto;
+}
+.game .modal h2 {
+  font-size: 30px;
+}
+.game .modal .evidence-paper {
+  color: #302d26;
+  background: #f2ead9;
+  border: 1px solid #d3c6aa;
+  border-radius: 3px;
+  box-shadow: 0 4px 15px #0002;
+}
+.game .modal .evidence-paper p {
+  line-height: 1.85;
+}
+.game .modal form label {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+}
+.game .modal .full {
+  margin-top: 10px;
+}
+.game .muted {
+  line-height: 1.7;
+}
+@media (max-width: 600px) {
+  .game-header {
+    padding: 12px;
+    gap: 10px;
+  }
+  .game-header-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .game-title {
+    border: 0;
+  }
+  .team-guide.case-status {
+    padding: 15px;
+  }
+  .role-strip {
+    display: grid;
+    gap: 5px;
+  }
+  .scene-summary h1 {
+    font-size: 30px;
+  }
+  .game .room-code {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game *,
+  .game *:before,
+  .game *:after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

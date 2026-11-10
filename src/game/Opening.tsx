@@ -85,10 +85,8 @@ export function Opening({
           <p>{you}</p>
         </div>
         <ol className="opening-instructions">
-          <li>
-            Follow the task marked <strong>Your job</strong>.
-          </li>
-          <li>Ask your partner the question shown on screen.</li>
+          <li>Inspect objects and question the people in your location.</li>
+          <li>Compare what you found with your partner’s account.</li>
           <li>
             Every clue you find goes to{" "}
             <strong>both notebooks automatically</strong>.
