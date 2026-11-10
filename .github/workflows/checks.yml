@@ -25,3 +25,4 @@ jobs:
       - run: node scripts/check-presentation.mjs
       - run: node scripts/check-sound.mjs
       - run: node scripts/check-voice-capture.mjs
+      - run: node scripts/check-scene-layout.mjs

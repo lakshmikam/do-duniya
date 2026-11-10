@@ -1,172 +1,429 @@
-.investigation-scene {
-  border-radius: 20px;
-  border: 1px solid #425b75;
+.investigation-scene.room-view {
+  border: 1px solid #46504f;
+  border-radius: 4px;
   overflow: hidden;
-  background: #23384b;
-  color: #f9f2dc;
-  box-shadow: 0 10px 28px #1b2d401a;
+  background: #142023;
+  color: #dedfd4;
+  box-shadow: 0 16px 38px #07101424;
 }
-.simple-stage {
+.room-stage {
   position: relative;
-  aspect-ratio: 5/3;
-  min-height: 330px;
+  width: 100%;
   overflow: hidden;
   isolation: isolate;
+  background: #10222c;
 }
-.simple-world,
-.simple-shade {
+.room-world,
+.room-colour-grade,
+.room-window-light,
+.room-floor-grid,
+.room-camera-corners {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
-.simple-world > svg {
-  height: 100%;
-  width: 100%;
+.room-world > svg {
   display: block;
+  width: 100%;
+  height: 100%;
+  filter: saturate(0.24) contrast(1.06) brightness(0.73);
 }
-.simple-shade {
-  background: linear-gradient(transparent 45%, #16273835);
+.room-colour-grade {
+  background:
+    linear-gradient(105deg, #102e3e2e 0%, transparent 42%, #06191d55 100%),
+    linear-gradient(0deg, #071318a1, transparent 59%, #111e2a40);
+  z-index: 1;
 }
-.simple-clue,
-.simple-person {
+.room-window-light {
+  z-index: 2;
+  opacity: 0.28;
+  background: linear-gradient(
+    121deg,
+    transparent 37%,
+    #ccd1b31c 38%,
+    #b5c7ba3b 46%,
+    transparent 64%
+  );
+  clip-path: polygon(12% 0, 36% 0, 83% 100%, 49% 100%);
+}
+.room-floor-grid {
+  inset: 72% 0 0;
+  z-index: 2;
+  background:
+    linear-gradient(0deg, #10212894, transparent),
+    repeating-linear-gradient(0deg, transparent 0 42px, #d8e3ce0b 43px 44px);
+  border-top: 1px solid #c3d7c20c;
+  transform: perspective(500px) rotateX(11deg);
+  transform-origin: 50% 100%;
+}
+.room-camera-corners {
+  inset: 13px;
+  z-index: 10;
+  background:
+    linear-gradient(#a7b7ad88, #a7b7ad88) left top/20px 1px no-repeat,
+    linear-gradient(#a7b7ad88, #a7b7ad88) left top/1px 20px no-repeat,
+    linear-gradient(#a7b7ad88, #a7b7ad88) right bottom/20px 1px no-repeat,
+    linear-gradient(#a7b7ad88, #a7b7ad88) right bottom/1px 20px no-repeat;
+  opacity: 0.45;
+}
+.room-inspection-light {
   position: absolute;
-  transform: translate(-50%, -100%);
   z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border: 0;
-  background: none;
-  color: #fff4d9;
-  text-align: center;
-  padding: 0;
-  max-width: 150px;
-  cursor: pointer;
+  width: 132px;
+  height: 112px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse, #ded5aa29, transparent 67%);
+  pointer-events: none;
 }
-.simple-clue > span {
+.room-object-marker,
+.room-actor {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  color: #f4eee1;
+  z-index: 5;
+  min-width: 0;
+  min-height: 0;
+}
+.room-object-marker {
+  transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  border: 2px solid #ffe0a6;
   border-radius: 50%;
-  background: #263d50;
-  box-shadow: 0 3px 12px #0004;
+  isolation: isolate;
 }
-.simple-clue strong,
-.simple-person strong {
-  background: #1d3546ed;
-  padding: 6px 9px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.4;
-  max-width: 145px;
-  margin-top: 4px;
-}
-.simple-clue small,
-.simple-person small {
-  font-size: 10px;
-  padding: 4px 7px;
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  background: #1d3546dc;
-  border-radius: 5px;
-}
-.simple-person .game-character {
-  width: 90px;
-  height: 118px;
-}
-.simple-person > svg {
-  width: 90px;
-  height: 118px;
-}
-.simple-person:hover strong,
-.simple-clue:hover > span,
-.approaching strong {
-  outline: 2px solid #ffe5ae;
-}
-.simple-investigator {
+.marker-prop {
   position: absolute;
-  z-index: 4;
+  inset: 5px;
+  display: grid;
+  place-items: center;
+  opacity: 0.55;
+  filter: drop-shadow(0 4px 4px #0009);
+}
+.marker-prop svg {
+  width: 34px;
+  height: 30px;
+  fill: #d4c8a6;
+  stroke: #353e3a;
+  stroke-width: 1.7;
+}
+.room-object-marker:hover .marker-prop,
+.room-object-marker.selected .marker-prop {
+  opacity: 0.9;
+}
+.marker-number {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  border: 1px solid #d5d6bdc2;
+  box-shadow: 0 2px 12px #020d1699;
+  background: #1c2c30ef;
+  color: #ece9d5;
+  font:
+    500 10px/1 "IBM Plex Mono",
+    monospace;
+  z-index: 1;
+  transform: translate(9px, -8px);
+}
+.room-object-marker.selected .marker-number {
+  background: #d4c99b;
+  color: #142329;
+  border-color: #f3e9c4;
+}
+.marker-check {
+  position: absolute;
+  right: 3px;
+  bottom: 4px;
+  border-radius: 50%;
+  padding: 1px;
+  background: #8fa69b;
+  color: #102727;
+  box-sizing: content-box;
+  z-index: 2;
+}
+.room-actor {
   transform: translate(-50%, -100%);
-  width: 66px;
-  height: 110px;
-  transition:
-    left 0.45s ease-in-out,
-    top 0.45s ease-in-out;
+  border-radius: 3px;
+  filter: saturate(0.25) brightness(0.87) contrast(1.08);
+}
+.room-actor .game-character {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(3px 7px 4px #020b1599);
+}
+.room-actor.facing-left .game-character {
+  transform: scaleX(-1);
+}
+.room-actor.facing-right .game-character {
+  transform: none;
+}
+.room-actor .character-body,
+.room-actor .character-head {
+  animation: none !important;
+  transform: none;
+}
+.room-actor.selected {
+  filter: saturate(0.38) brightness(1.02) contrast(1.05);
+}
+.actor-letter {
+  position: absolute;
+  bottom: 0;
+  right: -2px;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #aab7a39e;
+  background: #122c32;
+  color: #dddcc5;
+  font:
+    9px/1 "IBM Plex Mono",
+    monospace;
+  border-radius: 50%;
+  box-shadow: 0 1px 7px #020f15;
+}
+.room-investigator {
+  position: absolute;
+  z-index: 7;
   pointer-events: none;
+  transform: translate(-50%, -100%);
+  transition-property: left, top;
+  transition-timing-function: linear;
+  filter: drop-shadow(2px 7px 3px #02091299);
+}
+.room-investigator svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.room-leg {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+.room-investigator.walking .left {
+  animation: room-step 0.24s ease-in-out infinite alternate;
+}
+.room-investigator.walking .right {
+  animation: room-step 0.24s ease-in-out -0.24s infinite alternate;
+}
+.room-action-rail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 0;
+  background: #18272b;
+  border-top: 1px solid #69706b55;
+}
+.room-action-rail > section {
+  padding: 20px;
+}
+.room-action-rail > section + section {
+  border-left: 1px solid #69706b3d;
+}
+.room-action-rail h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font:
+    500 11px/1.4 "IBM Plex Mono",
+    monospace;
+  letter-spacing: 0.02em;
+  color: #c2c9bb;
+  margin: 0 0 12px;
+}
+.room-action-rail h3 span {
+  color: #82968e;
+  font-size: 10px;
+}
+.room-action-rail > section > div {
+  display: grid;
+  gap: 5px;
+}
+.room-action-rail button {
   display: flex;
   align-items: center;
-  flex-direction: column;
+  gap: 11px;
+  width: 100%;
+  min-height: 53px;
+  text-align: left;
+  padding: 8px 9px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: #e5e7db;
+  background: #ffffff03;
+  cursor: pointer;
+  box-shadow: none;
 }
-.simple-investigator svg {
-  width: 62px;
-  height: 102px;
+.room-action-rail button:hover {
+  border-color: #929f8c66;
+  background: #cbd4b80c;
 }
-.simple-investigator span {
+.room-action-rail button.selected {
+  background: #cbd4b812;
+  border-color: #9caa8a66;
+}
+.room-action-rail button > svg {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: #acbba3;
+}
+.rail-code {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 28px;
+  border: 1px solid #8b998459;
+  background: #14262a;
+  color: #c9cfb9;
+  font:
+    10px/1 "IBM Plex Mono",
+    monospace;
+  border-radius: 2px;
+}
+.rail-code.person-code {
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+}
+.rail-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e0e5d9;
+  font-weight: 500;
+}
+.rail-name small {
+  display: block;
   font-size: 10px;
-  padding: 2px 6px;
-  background: #183246d9;
-  border-radius: 4px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #8da098;
+  margin-top: 3px;
 }
-.simple-instruction {
-  margin: 0;
-  padding: 12px 16px;
-  background: #1a2f40;
+.room-list-empty {
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.7;
+  color: #889b92;
+  padding: 5px 0;
+  margin: 0;
 }
-.simple-clue:focus-visible,
-.simple-person:focus-visible {
-  outline: 3px solid #ffd98d;
-  outline-offset: 6px;
-  border-radius: 8px;
+.room-instruction {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  margin: 0;
+  padding: 12px 20px;
+  background: #122327;
+  color: #aabcb2;
+  border-top: 1px solid #69706b3d;
+  font:
+    10px/1.65 "IBM Plex Mono",
+    monospace;
 }
-.simple-investigator.walking .left {
-  animation: simple-step 0.2s alternate infinite;
-  transform-origin: 30px 78px;
+.room-instruction > span {
+  display: block;
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  background: #8ea491;
+  border-radius: 50%;
 }
-.simple-investigator.walking .right {
-  animation: simple-step 0.2s alternate-reverse infinite;
-  transform-origin: 43px 78px;
+.room-instruction > span.is-travelling {
+  background: #d4c99b;
 }
-@keyframes simple-step {
+.room-view button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+.room-view button:focus-visible {
+  outline: 2px solid #e1d3a3;
+  outline-offset: 3px;
+}
+.room-view.paused .world-weather,
+.room-view.paused .world-clouds,
+.room-view.paused .lamp-halo,
+.room-view.paused .character-eyes {
+  animation-play-state: paused !important;
+}
+@keyframes room-step {
+  from {
+    transform: rotate(-9deg);
+  }
   to {
-    transform: rotate(12deg);
+    transform: rotate(9deg);
   }
 }
-@media (max-width: 650px) {
-  .simple-stage {
-    min-height: 330px;
+@media (max-width: 560px) {
+  .room-action-rail {
+    grid-template-columns: 1fr;
   }
-  .simple-person > svg,
-  .simple-person .game-character {
-    width: 68px;
-    height: 92px;
+  .room-action-rail > section {
+    padding: 17px;
   }
-  .simple-person strong,
-  .simple-clue strong {
-    font-size: 11px;
-    max-width: 106px;
+  .room-action-rail > section + section {
+    border-left: 0;
+    border-top: 1px solid #69706b3d;
   }
-  .simple-clue {
-    max-width: 110px;
+  .room-action-rail > section > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
   }
-  .simple-investigator {
-    width: 54px;
-    height: 91px;
+  .room-action-rail button {
+    min-height: 62px;
+    gap: 8px;
+    padding: 8px 6px;
+    align-items: flex-start;
   }
-  .simple-investigator svg {
-    width: 52px;
-    height: 86px;
+  .room-action-rail button > svg {
+    width: 13px;
+    margin-top: 4px;
+  }
+  .rail-name {
+    font-size: 12px;
+  }
+  .rail-code {
+    width: 23px;
+    height: 25px;
+    font-size: 9px;
+  }
+  .rail-code.person-code {
+    width: 23px;
+    height: 23px;
+  }
+  .rail-name small {
+    font-size: 9px;
+  }
+  .room-instruction {
+    padding: 11px 17px;
+    font-size: 9px;
+  }
+  .room-camera-corners {
+    inset: 10px;
+  }
+  .room-world > svg {
+    filter: saturate(0.22) contrast(1.08) brightness(0.76);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .simple-investigator {
-    transition: none;
+  .room-view .room-investigator {
+    transition: none !important;
   }
-  .simple-investigator.walking .simple-leg {
-    animation: none;
+  .room-view .room-leg,
+  .room-view .world-weather,
+  .room-view .world-clouds,
+  .room-view .lamp-halo,
+  .room-view .character-eyes,
+  .room-view .tape-reel {
+    animation: none !important;
   }
 }

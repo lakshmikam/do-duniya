@@ -10,9 +10,13 @@ import assert from "node:assert/strict";
 const root = process.cwd(),
   scratch = path.join(root, ".local-tools", "presentation-check");
 await fs.mkdir(scratch, { recursive: true });
-for (const name of ["World", "Opening", "InvestigationScene"]) {
+for (const name of ["World", "Opening", "InvestigationScene", "sceneLayout"]) {
   const source = await fs.readFile(
-    path.join(root, "src/game", name + ".tsx"),
+    path.join(
+      root,
+      "src/game",
+      name + (name === "sceneLayout" ? ".ts" : ".tsx"),
+    ),
     "utf8",
   );
   const output = ts
@@ -24,7 +28,8 @@ for (const name of ["World", "Opening", "InvestigationScene"]) {
       },
     })
     .outputText.replace('"./World"', '"./World.js"')
-    .replace('import "./investigation-scene.css";', "");
+    .replace('import "./investigation-scene.css";', "")
+    .replace('"./sceneLayout"', '"./sceneLayout.js"');
   await fs.writeFile(path.join(scratch, name + ".js"), output);
 }
 const { World, GameCharacter } = await import(
@@ -49,7 +54,7 @@ for (const blue of [false, true]) {
     }),
   );
   assert.ok(
-    walk.includes("Tap to investigate") &&
+    walk.includes("Investigate this location") &&
       !walk.includes("Run") &&
       !walk.includes("Hide") &&
       walk.includes("A permitted clue"),
