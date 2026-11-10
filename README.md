@@ -82,3 +82,5 @@ For an independent Claude critique, use CLAUDE_REVIEW_BRIEF.md with the current 
 ## Blue Carbuncle visual review (v8)
 
 One token theme, self-hosted fonts, viewport-first scene, notebook drawer and dialogue sheet replace the previous stacked UI. Blue Carbuncle has five distinct original SVG compositions. Room links prefill joining, and startup health polling shows a delayed wake-up screen. See UI_VISUAL_PASS.md for scope, checks and the explicit outstanding browser screenshots. The attached review gate keeps story/provider changes for a later round.
+
+Local preview can use a separate backend by setting DO_DUNIYA_DEV_API before npm run dev. The default remains http://127.0.0.1:8011.
