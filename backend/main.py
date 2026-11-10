@@ -120,14 +120,6 @@ def auth(code, authorization):
     return member(code, authorization.removeprefix("Bearer "))
 
 
-def require_test_access(candidate):
-    expected = os.getenv("TEST_ACCESS_CODE", "")
-    if expected and not secrets.compare_digest(
-        candidate.encode("utf-8"), expected.encode("utf-8")
-    ):
-        fail("Enter the private test access code shared by the host.", 403)
-
-
 def case(r):
     return CASES[r["case"]]
 
@@ -320,14 +312,12 @@ class Create(BaseModel):
     language: str = "en"
     timed: bool = True
     solo: bool = False
-    access_code: str = Field(default="", max_length=128)
 
 
 class Join(BaseModel):
     code: str = Field(min_length=6, max_length=6)
     name: str = Field(min_length=1, max_length=32)
     language: str = "en"
-    access_code: str = Field(default="", max_length=128)
 
 
 class Action(BaseModel):
@@ -359,7 +349,7 @@ def health():
         "ok": True,
         "cases": len(CASES),
         "reasoning": "Gemini only; authored choices work without a key",
-        "access_required": bool(os.getenv("TEST_ACCESS_CODE")),
+        "access_required": False,
     }
 
 
@@ -370,7 +360,6 @@ def cases():
 
 @app.post("/api/rooms")
 def create(body: Create):
-    require_test_access(body.access_code)
     if (
         body.case_id not in CASES
         or body.role not in ["field", "archive"]
@@ -418,7 +407,6 @@ def create(body: Create):
 
 @app.post("/api/join")
 async def join(body: Join):
-    require_test_access(body.access_code)
     with LOCK:
         r = ROOMS.get(body.code.upper())
         if not r or time.time() - r["created"] >= 86400:

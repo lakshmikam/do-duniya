@@ -227,3 +227,7 @@ Live synthetic Hindi-to-Telugu partner relay: original preserved, Telugu script 
 ## Blue Carbuncle visual round — November10
 
 67 backend regressions pass with no server/provider changes. TypeScript/Vite build passes.16 base component renders plus five distinct London compositions pass.144 original scene layouts/7,224 routes and125 compact geometries pass at the requested five widths with allotted200–600px heights.32 semantic theme contrast pairs pass4.5:1. Startup readiness, cancellation, existing sound and pause detection checks pass. No new paid-provider calls. Local browser automation is disabled, so there are no new browser screenshots or real-device layout/audio claims. See UI_VISUAL_PASS.md for the held story/audio stages and review boundary.
+
+## Public room entry
+
+66 backend tests pass after replacing the former two invite-gate tests with a public-entry regression: an old TEST_ACCESS_CODE does not block create/join, while unauthenticated room reads still fail. Production build passes. Chrome extension connected and actual hosted Blue Carbuncle scene was inspected; disproportionate art remains acknowledged and unchanged in this access-only update.

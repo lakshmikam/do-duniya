@@ -83,3 +83,7 @@ References:
 - https://render.com/docs/deploy-fastapi
 - https://render.com/docs/docker
 - https://render.com/docs/free
+
+## Public entry update
+
+The invitation-password gate was removed at the user’s request. TEST_ACCESS_CODE is no longer used, even if a historical Render value remains. Create/join stays rate limited; private player bearer passes and provider call ceilings remain. There is no need to share API keys with players. Older invite-only descriptions above are historical.

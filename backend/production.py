@@ -22,7 +22,7 @@ def create_app(static_dir=None):
 
     @web.middleware("http")
     async def hosting_boundary(request: Request, call_next):
-        # This is an invite-only test deployment, not a public free inference API.
+        # Public room entry retains creation throttles and bounded provider usage.
         if request.url.path in ["/api/rooms", "/api/join"] and request.method == "POST":
             address = request.client.host if request.client else "unknown"
             now = time.monotonic()

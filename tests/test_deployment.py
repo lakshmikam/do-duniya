@@ -35,32 +35,21 @@ def test_security_headers_and_private_api_cache(hosted):
     assert r.headers["permissions-policy"] == "camera=(), microphone=(self)"
 
 
-def test_invitation_required_for_create_and_join(hosted, monkeypatch):
-    monkeypatch.setenv("TEST_ACCESS_CODE", "local-test-invitation")
-    assert hosted.get("/api/health").json()["access_required"]
-    assert hosted.post("/api/rooms", json={"name": "A"}).status_code == 403
-    d = hosted.post(
-        "/api/rooms", json={"name": "A", "access_code": "local-test-invitation"}
-    ).json()
-    code = d["room"]["code"]
-    assert hosted.post("/api/join", json={"name": "B", "code": code}).status_code == 403
-    b = hosted.post(
-        "/api/join",
-        json={"name": "B", "code": code, "access_code": "local-test-invitation"},
+def test_public_create_and_join_ignore_legacy_invitation(hosted, monkeypatch):
+    monkeypatch.setenv("TEST_ACCESS_CODE", "legacy-unused-setting")
+    assert hosted.get("/api/health").json()["access_required"] is False
+    response = hosted.post("/api/rooms", json={"name": "A"})
+    assert response.status_code == 200
+    data = response.json()
+    code = data["room"]["code"]
+    joined = hosted.post("/api/join", json={"name": "B", "code": code})
+    assert joined.status_code == 200
+    assert hosted.get("/api/rooms/" + code).status_code == 403
+    assert (
+        hosted.get("/api/rooms/" + code, headers=headers(data["token"])).status_code
+        == 200
     )
-    assert b.status_code == 200
-    assert "local-test-invitation" not in str(d)
-    assert "local-test-invitation" not in str(b.json())
-
-
-def test_existing_room_pass_does_not_require_invitation_again(hosted, monkeypatch):
-    monkeypatch.setenv("TEST_ACCESS_CODE", "invitation")
-    d = hosted.post(
-        "/api/rooms", json={"name": "A", "access_code": "invitation"}
-    ).json()
-    monkeypatch.setenv("TEST_ACCESS_CODE", "rotated-invitation")
-    r = hosted.get("/api/rooms/" + d["room"]["code"], headers=headers(d["token"]))
-    assert r.status_code == 200
+    assert "legacy-unused-setting" not in str(data) + str(joined.json())
 
 
 def test_creation_attempts_rate_limited(hosted):

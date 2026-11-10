@@ -4,7 +4,7 @@ A two-player mystery with complementary roles, voice conversations and an automa
 team notebook. One player investigates the scene; the other checks the records.
 Both see the chapter question; optional notebook hints help when they are stuck.
 
-Current playtest build: https://do-duniya-test.onrender.com (invitation protected).
+Current playtest build: https://do-duniya-test.onrender.com (public room entry).
 
 ## Current game loop
 
@@ -57,7 +57,7 @@ node scripts/check-sound.mjs
 
 Paid-provider scripts are opt-in. See [VERIFICATION.md](VERIFICATION.md) for actual
 checks and device-testing limitations. Raw keys, microphone audio and local output
-files are excluded from Git. The shared test service remains invitation protected.
+files are excluded from Git. Players create or join rooms without an invitation password; room passes and usage caps remain enforced.
 
 ## Credits and design research
 
@@ -84,3 +84,5 @@ For an independent Claude critique, use CLAUDE_REVIEW_BRIEF.md with the current 
 One token theme, self-hosted fonts, viewport-first scene, notebook drawer and dialogue sheet replace the previous stacked UI. Blue Carbuncle has five distinct original SVG compositions. Room links prefill joining, and startup health polling shows a delayed wake-up screen. See UI_VISUAL_PASS.md for scope, checks and the explicit outstanding browser screenshots. The attached review gate keeps story/provider changes for a later round.
 
 Local preview can use a separate backend by setting DO_DUNIYA_DEV_API before npm run dev. The default remains http://127.0.0.1:8011.
+
+Public entry: create a room, copy its invitation link or six-character room code, and have the second player join with their own name. Both ready up, then begin. Old TEST_ACCESS_CODE values are ignored.

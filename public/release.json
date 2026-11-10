@@ -1,5 +1,5 @@
 {
-  "version": "carbuncle-room-v8",
+  "version": "public-entry-v9",
   "features": [
     "one-case-token-theme",
     "self-hosted-fonts",
@@ -10,6 +10,7 @@
     "five-london-scene-compositions",
     "room-invitation-links",
     "server-wake-screen",
-    "translated-partner-messages"
+    "translated-partner-messages",
+    "no-invitation-code"
   ]
 }

@@ -12,8 +12,6 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3.5-flash-lite
-      - key: TEST_ACCESS_CODE
-        sync: false
       - key: PROVIDER_DAILY_LIMIT
         value: "240"
       - key: ROOM_PROVIDER_LIMIT

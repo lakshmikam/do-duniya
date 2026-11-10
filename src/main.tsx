@@ -439,8 +439,7 @@ function App() {
       setToast("Sound could not start. You can still play with subtitles.");
     }
   }
-  const [accessRequired, setAccessRequired] = useState(false),
-    [accessCode, setAccessCode] = useState("");
+
   const [setup, setSetup] = useState<"create" | "join" | null>(null),
     [how, setHow] = useState(false),
     [name, setName] = useState(""),
@@ -512,13 +511,9 @@ function App() {
       .then(async () => {
         if (initial.signal.aborted) return;
         setWaking(false);
-        const [catalog, health] = await Promise.all([
-          request("/cases"),
-          request("/health"),
-        ]);
+        const catalog = await request("/cases");
         if (initial.signal.aborted) return;
         setCases(catalog);
-        setAccessRequired(Boolean(health.access_required));
         const saved = sessionStorage.getItem("duniya-session");
         if (saved && !invite) {
           try {
@@ -749,7 +744,6 @@ function App() {
               code: code.trim().toUpperCase(),
               name: name || "Investigator",
               language,
-              access_code: accessCode,
             })
           : await request("/rooms", {
               case_id: cases[selected].id,
@@ -758,7 +752,6 @@ function App() {
               language,
               timed,
               solo,
-              access_code: accessCode,
             });
       setToken(data.token);
       sync(data.room);
@@ -1264,20 +1257,6 @@ function App() {
                 enter();
               }}
             >
-              {accessRequired && (
-                <label>
-                  Private test access code
-                  <input
-                    required
-                    type="password"
-                    autoComplete="off"
-                    value={accessCode}
-                    maxLength={128}
-                    onChange={(e) => setAccessCode(e.target.value)}
-                    placeholder="The invitation code shared by your host"
-                  />
-                </label>
-              )}
               <label>
                 Your name
                 <input
