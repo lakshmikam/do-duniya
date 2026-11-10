@@ -1,4 +1,5 @@
 import { memo, useId } from "react";
+import { BlueWorld } from "./BlueWorld";
 
 /** Native vector environments: layered motion, lights and character staging. */
 function WorldScene({
@@ -9,6 +10,7 @@ function WorldScene({
   location?: string;
 }) {
   const id = useId().replace(/:/g, "");
+  if (blue) return <BlueWorld location={location} />;
   const indoors = ["console", "records", "office", "hotel", "ledger"].includes(
     location,
   );

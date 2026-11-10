@@ -78,3 +78,7 @@ The shared notebook now has bound pages and stable page selection during live up
 Partners can send a typed or completed spoken message in different selected languages. Prisma transcribes, Gemini translates, and optional Timbre playback reads the recipient version. Originals remain visible. Failed translation delivers the original with a warning, and never speaks an untranslated message as the target language. Hold-to-talk radio is a separate untranslated option. One tab controls each player; a second tab requires an explicit takeover.
 
 For an independent Claude critique, use CLAUDE_REVIEW_BRIEF.md with the current screenshots/source. No Claude review has been performed by this app.
+
+## Blue Carbuncle visual review (v8)
+
+One token theme, self-hosted fonts, viewport-first scene, notebook drawer and dialogue sheet replace the previous stacked UI. Blue Carbuncle has five distinct original SVG compositions. Room links prefill joining, and startup health polling shows a delayed wake-up screen. See UI_VISUAL_PASS.md for scope, checks and the explicit outstanding browser screenshots. The attached review gate keeps story/provider changes for a later round.

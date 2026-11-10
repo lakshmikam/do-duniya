@@ -26,7 +26,7 @@ Strong rainy scene art, but dark-on-dark titles, clipped toolbar buttons, crowde
 
 ## Source to inspect
 
-src/main.tsx; src/game/InvestigationScene.tsx; src/game/sceneLayout.ts; src/game/CaseNotebook.tsx; src/game/notebook.css; src/game/mystery.css; src/game/VoiceChat.tsx; src/game/PartnerLink.tsx; backend/cases.py; backend/cast.py; backend/guidance.py; backend/case_coach.py; backend/partner_language.py.
+src/main.tsx; src/game/InvestigationScene.tsx; src/game/sceneLayout.ts; src/game/CaseNotebook.tsx; src/theme.css; src/theme.css; src/game/VoiceChat.tsx; src/game/PartnerLink.tsx; backend/cases.py; backend/cast.py; backend/guidance.py; backend/case_coach.py; backend/partner_language.py.
 Never request .env files, keys, private invite codes or real personal recordings.
 
 Return: (1) five biggest concrete problems, (2) an example first five minutes for both players, (3) three feasible improvements ordered by benefit/effort, (4) honest unknowns that require playing with two humans. Do not promise contest prizes.

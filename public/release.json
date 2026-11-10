@@ -1,12 +1,15 @@
 {
-  "version": "mystery-room-v7",
+  "version": "carbuncle-room-v8",
   "features": [
-    "bound-case-notebook",
-    "three-team-hints",
-    "translated-partner-messages",
-    "spoken-partner-translations",
-    "numbered-scene-markers",
-    "safe-character-approaches",
-    "single-tab-player-control"
+    "one-case-token-theme",
+    "self-hosted-fonts",
+    "viewport-first-investigation",
+    "chapter-details-popover",
+    "notebook-side-drawer",
+    "dialogue-bottom-sheet",
+    "five-london-scene-compositions",
+    "room-invitation-links",
+    "server-wake-screen",
+    "translated-partner-messages"
   ]
 }

@@ -223,3 +223,7 @@ sharing. This revision deliberately supersedes the prior private/shared-clue UX.
 These are programmatic checks, not a two-human playtest or proof of perceptual voice quality. Browser control is unavailable in this session, so visual behavior, microphone permissions, mobile autoplay and native-speaker translation quality still require device testing.
 
 Live synthetic Hindi-to-Telugu partner relay: original preserved, Telugu script accepted, 23:47 retained; message endpoint 2.20s and Timbre endpoint 2.19s returned a valid 7.2s WAV. Two earlier attempts delivered the original with a translation warning; one diagnostic identified copied Hindi. An explicit target-language/native-script instruction fixed this sample. Three Gemini attempts and one Timbre request total. The audio was validated structurally, not listened to, and native-speaker accuracy is not claimed.
+
+## Blue Carbuncle visual round — November10
+
+67 backend regressions pass with no server/provider changes. TypeScript/Vite build passes.16 base component renders plus five distinct London compositions pass.144 original scene layouts/7,224 routes and125 compact geometries pass at the requested five widths with allotted200–600px heights.32 semantic theme contrast pairs pass4.5:1. Startup readiness, cancellation, existing sound and pause detection checks pass. No new paid-provider calls. Local browser automation is disabled, so there are no new browser screenshots or real-device layout/audio claims. See UI_VISUAL_PASS.md for the held story/audio stages and review boundary.

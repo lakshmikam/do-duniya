@@ -10,7 +10,13 @@ import assert from "node:assert/strict";
 const root = process.cwd(),
   scratch = path.join(root, ".local-tools", "presentation-check");
 await fs.mkdir(scratch, { recursive: true });
-for (const name of ["World", "Opening", "InvestigationScene", "sceneLayout"]) {
+for (const name of [
+  "World",
+  "BlueWorld",
+  "Opening",
+  "InvestigationScene",
+  "sceneLayout",
+]) {
   const source = await fs.readFile(
     path.join(
       root,
@@ -28,8 +34,8 @@ for (const name of ["World", "Opening", "InvestigationScene", "sceneLayout"]) {
       },
     })
     .outputText.replace('"./World"', '"./World.js"')
-    .replace('import "./investigation-scene.css";', "")
-    .replace('"./sceneLayout"', '"./sceneLayout.js"');
+    .replace('"./sceneLayout"', '"./sceneLayout.js"')
+    .replace('"./BlueWorld"', '"./BlueWorld.js"');
   await fs.writeFile(path.join(scratch, name + ".js"), output);
 }
 const { World, GameCharacter } = await import(
@@ -64,7 +70,12 @@ for (const blue of [false, true]) {
     const html = renderToStaticMarkup(
       React.createElement(World, { blue, location }),
     );
-    assert.ok(html.includes("<svg") && html.includes("world-weather"));
+    assert.ok(
+      html.includes("<svg") &&
+        (blue
+          ? html.includes("carbuncle-world")
+          : html.includes("world-weather")),
+    );
     assert.equal(
       (html.match(/id="/g) || []).length,
       new Set([...html.matchAll(/id="([^"]+)"/g)].map((x) => x[1])).size,
@@ -108,4 +119,20 @@ assert.ok(
 );
 console.log(
   `${checks} presentation renders passed; scene, intro and character packages render without model calls.`,
+);
+const londonLocations = ["street", "market", "brixton", "hotel", "ledger"];
+const londonMarkup = londonLocations.map((location) =>
+  renderToStaticMarkup(React.createElement(World, { blue: true, location })),
+);
+assert.equal(
+  new Set(londonMarkup.map((s) => s.match(/aria-label="([^"]+)"/)[1])).size,
+  5,
+);
+assert.ok(
+  londonMarkup.every(
+    (s) => s.includes("carbuncle-world") && s.includes("<svg"),
+  ),
+);
+console.log(
+  "Five distinct Blue Carbuncle SVG sets render with unique accessible descriptions.",
 );
