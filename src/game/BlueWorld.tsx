@@ -55,7 +55,7 @@ export function BlueWorld({ location }: { location: string }) {
   return (
     <svg
       viewBox="0 0 1200 720"
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={title}
       className="animated-world carbuncle-world"
@@ -415,7 +415,7 @@ export function BlueWorld({ location }: { location: string }) {
           />
           <path d="M510 465V290h240v175" fill="#132720" />
           <path
-            d="m565 450 35-100 20 58 24-96 48 138Z"
+            d="M551 451q-15-31 14-58 10 25 22 0t18-48q44 42 29 71 23-18 24-35 31 42 7 70Z"
             fill="#ca8e43"
             opacity=".8"
           />
@@ -480,7 +480,7 @@ export function BlueWorld({ location }: { location: string }) {
             strokeWidth="8"
           />
           <path
-            d="m995 542-52 28 55 45 50-42Z"
+            d="m995 562-16 9 17 14 15-13Z"
             fill={`url(#${id}gem)`}
             stroke="#9bdfff"
             strokeWidth="3"

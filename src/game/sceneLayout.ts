@@ -47,10 +47,11 @@ export function sceneLayout(
   availableHeight?: number,
 ): SceneLayout {
   const width = Math.max(280, rawWidth),
-    small = width < 500;
+    small = width < 500,
+    staged = width >= 1000 && (availableHeight || 720) >= 600;
   const markerSize = 48,
-    actorWidth = small ? 64 : 76,
-    playerWidth = small ? 38 : 44;
+    actorWidth = staged ? 112 : small ? 64 : 76,
+    playerWidth = staged ? 105 : small ? 38 : 44;
   const columns = Math.min(
     Math.max(1, objectCount),
     small ? 3 : width < 850 ? 4 : 5,
@@ -64,14 +65,16 @@ export function sceneLayout(
     ),
   );
   const height = availableHeight
-    ? Math.max(
-        200,
-        rows * 62 + 100,
-        Math.min(naturalHeight, Math.floor(availableHeight)),
-      )
+    ? Math.max(200, rows * 62 + 100, Math.floor(availableHeight))
     : naturalHeight;
-  const actorHeight = Math.min(small ? 102 : 120, Math.floor(height * 0.3));
-  const playerHeight = Math.min(small ? 76 : 86, Math.floor(height * 0.24));
+  const actorHeight = Math.min(
+    staged ? 180 : small ? 102 : 120,
+    Math.floor(height * (staged ? 0.26 : 0.3)),
+  );
+  const playerHeight = Math.min(
+    staged ? 176 : small ? 76 : 86,
+    Math.floor(height * (staged ? 0.25 : 0.24)),
+  );
   const frontLane = height - 16;
   const actorXs =
     actorCount === 1
@@ -84,7 +87,7 @@ export function sceneLayout(
           );
   const actors: SceneSlot[] = actorXs.map((f) => {
     const x = width * f,
-      y = height * (height < 400 ? 0.64 : 0.72);
+      y = height * (height < 400 ? 0.64 : staged ? 0.7 : 0.72);
     return {
       x,
       y,
@@ -131,7 +134,7 @@ export function sceneLayout(
     ].sort((a, b) => a - b),
     corridorXs = edges.slice(0, -1).map((e, i) => (e + edges[i + 1]) / 2);
   function approachFor(slot: SceneSlot, person: boolean): ScenePoint {
-    const nearFoot = height * (height < 400 ? 0.64 : 0.72) + 8,
+    const nearFoot = height * (height < 400 ? 0.64 : staged ? 0.7 : 0.72) + 8,
       ys = person
         ? [slot.y + 8, slot.y + playerHeight + 12, frontLane]
         : [nearFoot, slot.y + playerHeight + markerSize / 2 + 14, frontLane],

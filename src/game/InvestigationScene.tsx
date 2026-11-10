@@ -51,14 +51,8 @@ export function InvestigationScene(props: Props) {
     [selection, setSelection] = useState<Selection>(null),
     [duration, setDuration] = useState(300);
   const layout = useMemo(
-    () =>
-      sceneLayout(
-        width,
-        props.objects.length,
-        props.characters.length,
-        availableHeight,
-      ),
-    [width, props.objects.length, props.characters.length, availableHeight],
+    () => sceneLayout(1200, props.objects.length, props.characters.length, 720),
+    [props.objects.length, props.characters.length],
   );
   function cancel(clearSelection = false) {
     generation.current++;
@@ -185,156 +179,130 @@ export function InvestigationScene(props: Props) {
       aria-label="Investigate this location"
     >
       <div className="room-stage" ref={stage}>
-        <div className="room-world">
-          <World location={props.location} blue={props.blue} />
-        </div>
-        <div className="room-colour-grade" />
-        <div className="room-window-light" aria-hidden="true" />
-        <div className="room-floor-grid" aria-hidden="true" />
-        <div className="room-camera-corners" aria-hidden="true" />
-        {focus && (
-          <div
-            className="room-inspection-light"
-            style={{ left: focus.x, top: focus.y }}
-            aria-hidden="true"
-          />
-        )}
-        {props.objects.map((object, index) => {
-          const slot = layout.objects[index];
-          return (
-            <button
-              key={object.id}
-              className={
-                "room-object-marker " +
-                (recent.has(object.id) ? "just-found " : "") +
-                (selection?.id === object.id && selection.type === "object"
-                  ? "selected "
-                  : "") +
-                (object.discovered ? "reviewed" : "")
-              }
-              style={{
-                left: slot.x,
-                top: slot.y,
-                width: layout.markerSize,
-                height: layout.markerSize,
-              }}
-              disabled={props.disabled}
-              onClick={() => approach("object", index, object.id)}
-              aria-label={`${index + 1}. ${object.discovered ? "Review" : "Inspect"} ${object.title}`}
-              aria-pressed={
-                selection?.id === object.id && selection.type === "object"
-              }
-            >
-              <span className="marker-prop" aria-hidden="true">
-                {object.kind === "audio" ? (
-                  <svg viewBox="0 0 34 25">
-                    <rect x="2" y="3" width="30" height="19" rx="2" />
-                    <path d="M7 8h20M7 12h20M7 16h11" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 32 30">
-                    <path d="M6 3h18l4 5v19H6Z" />
-                    <path d="M11 12h12M11 17h10M11 22h11" />
-                  </svg>
-                )}
-              </span>
-              <span className="marker-label">{object.title}</span>
-              <span className="marker-number">
-                {props.blue && <span aria-hidden="true">◇</span>}
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              {object.discovered && (
-                <Check className="marker-check" size={11} aria-hidden="true" />
-              )}
-            </button>
-          );
-        })}
-        {props.characters.map((character, index) => {
-          const slot = layout.actors[index];
-          return (
-            <button
-              key={character.id}
-              className={
-                "room-actor " +
-                (position.x < slot.x ? "facing-left " : "facing-right ") +
-                (selection?.id === character.id && selection.type === "person"
-                  ? "selected"
-                  : "")
-              }
-              style={{
-                left: slot.x,
-                top: slot.y,
-                width: layout.actorWidth,
-                height: layout.actorHeight,
-              }}
-              disabled={props.disabled}
-              onClick={() => approach("person", index, character.id)}
-              aria-label={`Speak with ${character.name}`}
-              aria-pressed={
-                selection?.id === character.id && selection.type === "person"
-              }
-            >
-              <GameCharacter id={character.id} />
-              <span className="actor-letter" aria-hidden="true">
-                {String.fromCharCode(65 + index)}
-              </span>
-            </button>
-          );
-        })}
         <div
-          className={"room-investigator " + (walking ? "walking" : "")}
+          className="scene-canvas"
           style={{
-            left: position.x,
-            top: position.y,
-            width: layout.playerWidth,
-            height: layout.playerHeight,
-            transitionDuration: `${duration}ms`,
+            width: 1200,
+            height: 720,
+            transform: `translate(-50%,-50%) scale(${Math.min(width / 1200, availableHeight / 720)})`,
           }}
-          aria-hidden="true"
         >
-          <svg viewBox="0 0 60 120">
-            <ellipse
-              cx="30"
-              cy="114"
-              rx="20"
-              ry="4"
-              fill="#020c12"
-              opacity=".65"
+          <div className="room-world">
+            <World location={props.location} blue={props.blue} />
+          </div>
+          <div className="room-colour-grade" />
+          <div className="room-window-light" aria-hidden="true" />
+          <div className="room-floor-grid" aria-hidden="true" />
+          <div className="room-camera-corners" aria-hidden="true" />
+          {focus && (
+            <div
+              className="room-inspection-light"
+              style={{ left: focus.x, top: focus.y }}
+              aria-hidden="true"
             />
-            <g className="room-leg left">
-              <path d="M18 78l-2 32h13l3-32" fill="#263239" />
-              <path d="M15 106h14v8H10q0-6 5-8" fill="#111b23" />
-            </g>
-            <g className="room-leg right">
-              <path d="M33 78l2 32h13l-4-32" fill="#263239" />
-              <path d="M35 106h13q7 2 8 8H35Z" fill="#111b23" />
-            </g>
-            <path
-              d="M17 34q13-7 26 0l8 52H9Z"
-              fill="#9b947c"
-              stroke="#464f4b"
-              strokeWidth="2"
-            />
-            <path
-              d="M29 37v44M17 37l13 10 13-10"
-              stroke="#686f61"
-              strokeWidth="2"
-              fill="none"
-            />
-            <path
-              d="M16 40L8 68l8 3 10-30m18-1l8 28-8 3-9-30"
-              fill="#8f8c76"
-              stroke="#464f4b"
-              strokeWidth="2"
-            />
-            <ellipse cx="30" cy="23" rx="14" ry="17" fill="#393932" />
-            <path d="M13 19q0-18 17-18t17 18" fill="#323b3d" />
-            <path d="M8 18h44v5H8Z" fill="#202e33" />
-            <path d="M18 30q12 9 24 0l2 9-14 8-14-8Z" fill="#6e776e" />
-          </svg>
+          )}
+          {props.objects.map((object, index) => {
+            const slot = layout.objects[index];
+            return (
+              <button
+                key={object.id}
+                className={
+                  "room-object-marker " +
+                  (recent.has(object.id) ? "just-found " : "") +
+                  (selection?.id === object.id && selection.type === "object"
+                    ? "selected "
+                    : "") +
+                  (object.discovered ? "reviewed" : "")
+                }
+                style={{
+                  left: slot.x,
+                  top: slot.y,
+                  width: layout.markerSize,
+                  height: layout.markerSize,
+                }}
+                disabled={props.disabled}
+                onClick={() => approach("object", index, object.id)}
+                aria-label={`${index + 1}. ${object.discovered ? "Review" : "Inspect"} ${object.title}`}
+                aria-pressed={
+                  selection?.id === object.id && selection.type === "object"
+                }
+              >
+                <span className="marker-prop" aria-hidden="true">
+                  {object.kind === "audio" ? (
+                    <svg viewBox="0 0 34 25">
+                      <rect x="2" y="3" width="30" height="19" rx="2" />
+                      <path d="M7 8h20M7 12h20M7 16h11" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 32 30">
+                      <path d="M6 3h18l4 5v19H6Z" />
+                      <path d="M11 12h12M11 17h10M11 22h11" />
+                    </svg>
+                  )}
+                </span>
+                <span className="marker-label">{object.title}</span>
+                <span className="marker-number">
+                  {props.blue && <span aria-hidden="true">◇</span>}
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                {object.discovered && (
+                  <Check
+                    className="marker-check"
+                    size={11}
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
+            );
+          })}
+          {props.characters.map((character, index) => {
+            const slot = layout.actors[index];
+            return (
+              <button
+                key={character.id}
+                className={
+                  "room-actor " +
+                  (position.x < slot.x ? "facing-left " : "facing-right ") +
+                  (selection?.id === character.id && selection.type === "person"
+                    ? "selected"
+                    : "")
+                }
+                style={{
+                  left: slot.x,
+                  top: slot.y,
+                  width: layout.actorWidth,
+                  height: layout.actorHeight,
+                }}
+                disabled={props.disabled}
+                onClick={() => approach("person", index, character.id)}
+                aria-label={`Speak with ${character.name}`}
+                aria-pressed={
+                  selection?.id === character.id && selection.type === "person"
+                }
+              >
+                <GameCharacter id={character.id} />
+                <span className="actor-letter" aria-hidden="true">
+                  {String.fromCharCode(65 + index)}
+                </span>
+              </button>
+            );
+          })}
+          <div
+            className={"room-investigator " + (walking ? "walking" : "")}
+            style={{
+              left: position.x,
+              top: position.y,
+              width: layout.playerWidth,
+              height: layout.playerHeight,
+              transitionDuration: `${duration}ms`,
+            }}
+            aria-hidden="true"
+          >
+            <GameCharacter id="investigator" />
+          </div>
         </div>
       </div>
-      <details className="scene-index">
+      <details className="scene-index" open={width < 650 ? true : undefined}>
         <summary>
           <span>People &amp; objects</span>
           <span>{props.objects.length + props.characters.length}</span>

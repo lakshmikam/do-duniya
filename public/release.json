@@ -1,5 +1,5 @@
 {
-  "version": "public-entry-v9",
+  "version": "soft-scenes-v10",
   "features": [
     "one-case-token-theme",
     "self-hosted-fonts",
@@ -11,6 +11,11 @@
     "room-invitation-links",
     "server-wake-screen",
     "translated-partner-messages",
-    "no-invitation-code"
+    "no-invitation-code",
+    "shared-scene-camera",
+    "consistent-character-scale",
+    "muted-case-palettes",
+    "phone-action-list",
+    "nonoverlapping-dialogue-controls"
   ]
 }

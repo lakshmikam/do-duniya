@@ -18,7 +18,7 @@ function WorldScene({
     <svg
       className={"animated-world " + (blue ? "winter-world" : "storm-world")}
       viewBox="0 0 1200 720"
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={
         indoors
@@ -481,7 +481,8 @@ function CharacterIllustration({
     henry: "#d5a35f",
     dealer: "#779d78",
     james: "#be7eab",
-    inspector: "#7194c5",
+    inspector: "#81958d",
+    investigator: "#8e9787",
   };
   return (
     <svg

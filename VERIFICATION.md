@@ -231,3 +231,9 @@ Live synthetic Hindi-to-Telugu partner relay: original preserved, Telugu script 
 ## Public room entry
 
 66 backend tests pass after replacing the former two invite-gate tests with a public-entry regression: an old TEST_ACCESS_CODE does not block create/join, while unauthenticated room reads still fail. Production build passes. Chrome extension connected and actual hosted Blue Carbuncle scene was inspected; disproportionate art remains acknowledged and unchanged in this access-only update.
+
+## Softer scenes v10
+
+Room artwork, people and markers now share a1200×720 camera and uniform fit; the scene is no longer cropped to fill. Player and NPC art use a consistent illustration family and larger world-scale dimensions. Muted brass/sage/charcoal palettes replace bright accents. Phone controls use a readable action list below the full room. Dialogue topic expansion is in normal flow; notifications no longer cover the instruction strip.
+
+Browser observations: desktop Baker Street, phone scene, Henry conversation and notebook were inspected. The phone page reported no document overflow. Browser screenshot capture subsequently timed out; Windows fallback stopped because it could not determine the current URL reliably. No complete screenshot matrix or final visual approval is claimed. No clue, solution, provider or access changes in this revision; public entry stays enabled.
