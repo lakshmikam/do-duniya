@@ -44,27 +44,35 @@ export function sceneLayout(
   rawWidth: number,
   objectCount: number,
   actorCount: number,
+  availableHeight?: number,
 ): SceneLayout {
   const width = Math.max(280, rawWidth),
     small = width < 500;
   const markerSize = 48,
     actorWidth = small ? 64 : 76,
-    actorHeight = small ? 102 : 120,
-    playerWidth = small ? 38 : 44,
-    playerHeight = small ? 76 : 86;
+    playerWidth = small ? 38 : 44;
   const columns = Math.min(
-      Math.max(1, objectCount),
-      small ? 3 : width < 850 ? 4 : 5,
+    Math.max(1, objectCount),
+    small ? 3 : width < 850 ? 4 : 5,
+  );
+  const rows = Math.max(1, Math.ceil(objectCount / columns));
+  const naturalHeight = Math.ceil(
+    Math.max(
+      420,
+      width * 0.52,
+      2 * ((rows - 1) * 62 + markerSize / 2 + (small ? 102 : 120) + 18),
     ),
-    rows = Math.max(1, Math.ceil(objectCount / columns));
-  const height = Math.ceil(
-      Math.max(
-        420,
-        width * 0.52,
-        2 * ((rows - 1) * 62 + markerSize / 2 + actorHeight + 18),
-      ),
-    ),
-    frontLane = height - 16;
+  );
+  const height = availableHeight
+    ? Math.max(
+        200,
+        rows * 62 + 100,
+        Math.min(naturalHeight, Math.floor(availableHeight)),
+      )
+    : naturalHeight;
+  const actorHeight = Math.min(small ? 102 : 120, Math.floor(height * 0.3));
+  const playerHeight = Math.min(small ? 76 : 86, Math.floor(height * 0.24));
+  const frontLane = height - 16;
   const actorXs =
     actorCount === 1
       ? [0.71]
@@ -76,7 +84,7 @@ export function sceneLayout(
           );
   const actors: SceneSlot[] = actorXs.map((f) => {
     const x = width * f,
-      y = height * 0.72;
+      y = height * (height < 400 ? 0.64 : 0.72);
     return {
       x,
       y,
@@ -91,7 +99,7 @@ export function sceneLayout(
         columns === 1
           ? width * 0.27
           : width * (0.17 + (col * 0.66) / (columns - 1)),
-      y = height * 0.22 + row * 62;
+      y = height * (height < 400 ? 0.16 : 0.22) + row * 62;
     return {
       x,
       y,
@@ -123,7 +131,7 @@ export function sceneLayout(
     ].sort((a, b) => a - b),
     corridorXs = edges.slice(0, -1).map((e, i) => (e + edges[i + 1]) / 2);
   function approachFor(slot: SceneSlot, person: boolean): ScenePoint {
-    const nearFoot = height * 0.72 + 8,
+    const nearFoot = height * (height < 400 ? 0.64 : 0.72) + 8,
       ys = person
         ? [slot.y + 8, slot.y + playerHeight + 12, frontLane]
         : [nearFoot, slot.y + playerHeight + markerSize / 2 + 14, frontLane],

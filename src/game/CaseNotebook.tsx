@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Fingerprint, Volume2, X } from "lucide-react";
-import "./notebook.css";
 
 export type NotebookEvidence = {
   id: string;
@@ -116,11 +115,18 @@ export function CaseNotebook({
         return;
       }
       if (event.key === "Tab" && dialog.current) {
-        const controls = Array.from(
-          dialog.current.querySelectorAll<HTMLElement>(
-            "button:not(:disabled), select:not(:disabled), a[href], [tabindex='0']",
+        const controls = [
+          ...Array.from(
+            dialog.current.querySelectorAll<HTMLElement>(
+              "button:not(:disabled),select:not(:disabled),a[href],[tabindex='0']",
+            ),
           ),
-        ).filter((element) => element.getClientRects().length > 0);
+          ...Array.from(
+            document.querySelectorAll<HTMLElement>(
+              "[data-partner-dock] button:not(:disabled),[data-partner-dock] input:not(:disabled)",
+            ),
+          ),
+        ].filter((element) => element.getClientRects().length > 0);
         if (!controls.length) {
           event.preventDefault();
           dialog.current.focus();
@@ -129,7 +135,10 @@ export function CaseNotebook({
         const first = controls[0],
           last = controls[controls.length - 1];
         if (
-          !dialog.current.contains(document.activeElement) ||
+          (!dialog.current.contains(document.activeElement) &&
+            !(document.activeElement as HTMLElement)?.closest(
+              "[data-partner-dock]",
+            )) ||
           document.activeElement === dialog.current
         ) {
           event.preventDefault();
@@ -190,7 +199,7 @@ export function CaseNotebook({
       <div
         className="case-notebook"
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-labelledby={titleId}
         tabIndex={-1}
         ref={dialog}

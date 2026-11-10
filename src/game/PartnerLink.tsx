@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { PartnerRadio, RadioPacket } from "./PartnerRadio";
 import { NoiseCalibration, SpeechSegmenter, speechWav } from "./voiceCapture";
-import "./partner-language.css";
 
 type Message = {
   comment?: string;

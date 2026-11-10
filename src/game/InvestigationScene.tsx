@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { World, GameCharacter } from "./World";
 import { ArrowRight, Check, MessageCircle } from "lucide-react";
 import { sceneLayout, scenePath, type ScenePoint } from "./sceneLayout";
-import "./investigation-scene.css";
+
 type Props = {
   location: string;
   blue?: boolean;
@@ -17,20 +17,48 @@ type Selection = { type: "object" | "person"; id: string } | null;
 /** Scene presentation cannot grant evidence: all interactions call the parent. */
 export function InvestigationScene(props: Props) {
   const root = useRef<HTMLElement>(null),
+    stage = useRef<HTMLDivElement>(null),
     latest = useRef(props),
     timer = useRef<ReturnType<typeof setTimeout> | null>(null),
     generation = useRef(0),
     reduced = useRef(false),
     current = useRef<ScenePoint>({ x: 28, y: 404 });
   latest.current = props;
+  const seen = useRef(
+    new Set(props.objects.filter((o) => o.discovered).map((o) => o.id)),
+  );
+  const [recent, setRecent] = useState<Set<string>>(new Set());
+  const foundKey = props.objects
+    .filter((o) => o.discovered)
+    .map((o) => o.id)
+    .join("|");
+  useEffect(() => {
+    const added = props.objects
+      .filter((o) => o.discovered && !seen.current.has(o.id))
+      .map((o) => o.id);
+    props.objects
+      .filter((o) => o.discovered)
+      .forEach((o) => seen.current.add(o.id));
+    if (!added.length) return;
+    setRecent(new Set(added));
+    const t = setTimeout(() => setRecent(new Set()), 1500);
+    return () => clearTimeout(t);
+  }, [foundKey]);
   const [width, setWidth] = useState(375),
+    [availableHeight, setAvailableHeight] = useState(420),
     [position, setPosition] = useState<ScenePoint>({ x: 28, y: 404 }),
     [walking, setWalking] = useState(false),
     [selection, setSelection] = useState<Selection>(null),
     [duration, setDuration] = useState(300);
   const layout = useMemo(
-    () => sceneLayout(width, props.objects.length, props.characters.length),
-    [width, props.objects.length, props.characters.length],
+    () =>
+      sceneLayout(
+        width,
+        props.objects.length,
+        props.characters.length,
+        availableHeight,
+      ),
+    [width, props.objects.length, props.characters.length, availableHeight],
   );
   function cancel(clearSelection = false) {
     generation.current++;
@@ -43,6 +71,11 @@ export function InvestigationScene(props: Props) {
     const element = root.current!;
     const measure = () => {
       const next = Math.round(element.getBoundingClientRect().width);
+      const h = Math.round(stage.current?.getBoundingClientRect().height || 0);
+      if (h > 0)
+        setAvailableHeight((previous) =>
+          Math.abs(previous - h) > 1 ? h : previous,
+        );
       if (next > 0)
         setWidth((previous) =>
           Math.abs(previous - next) > 1 ? next : previous,
@@ -51,6 +84,7 @@ export function InvestigationScene(props: Props) {
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
+    if (stage.current) observer.observe(stage.current);
     return () => observer.disconnect();
   }, []);
   useLayoutEffect(() => {
@@ -150,7 +184,7 @@ export function InvestigationScene(props: Props) {
       }
       aria-label="Investigate this location"
     >
-      <div className="room-stage" style={{ height: layout.height }}>
+      <div className="room-stage" ref={stage}>
         <div className="room-world">
           <World location={props.location} blue={props.blue} />
         </div>
@@ -172,6 +206,7 @@ export function InvestigationScene(props: Props) {
               key={object.id}
               className={
                 "room-object-marker " +
+                (recent.has(object.id) ? "just-found " : "") +
                 (selection?.id === object.id && selection.type === "object"
                   ? "selected "
                   : "") +
@@ -203,7 +238,9 @@ export function InvestigationScene(props: Props) {
                   </svg>
                 )}
               </span>
+              <span className="marker-label">{object.title}</span>
               <span className="marker-number">
+                {props.blue && <span aria-hidden="true">◇</span>}
                 {String(index + 1).padStart(2, "0")}
               </span>
               {object.discovered && (
@@ -297,82 +334,99 @@ export function InvestigationScene(props: Props) {
           </svg>
         </div>
       </div>
-      <div className="room-action-rail">
-        <section className="room-object-list" aria-label="Objects in this room">
-          <h3>
-            Inspect the room <span>{props.objects.length}</span>
-          </h3>
-          <div>
-            {props.objects.map((object, index) => (
-              <button
-                key={object.id}
-                disabled={props.disabled}
-                className={
-                  selection?.id === object.id && selection.type === "object"
-                    ? "selected"
-                    : ""
-                }
-                onClick={() => approach("object", index, object.id)}
-              >
-                <span className="rail-code">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="rail-name">
-                  {object.title}
-                  <small>
-                    {object.discovered
-                      ? "In your notebook"
-                      : object.kind === "audio"
-                        ? "Audio record"
-                        : object.kind === "testimony"
-                          ? "Witness account"
-                          : "Inspect"}
-                  </small>
-                </span>
-                {object.discovered ? (
-                  <Check size={15} />
-                ) : (
-                  <ArrowRight size={15} />
-                )}
-              </button>
-            ))}
-            {props.objects.length === 0 && (
-              <p className="room-list-empty">No objects available here yet.</p>
-            )}
-          </div>
-        </section>
-        <section className="room-person-list" aria-label="People in this room">
-          <h3>
-            Speak to someone <span>{props.characters.length}</span>
-          </h3>
-          <div>
-            {props.characters.map((character, index) => (
-              <button
-                key={character.id}
-                disabled={props.disabled}
-                className={
-                  selection?.id === character.id && selection.type === "person"
-                    ? "selected"
-                    : ""
-                }
-                onClick={() => approach("person", index, character.id)}
-              >
-                <span className="rail-code person-code">
-                  {String.fromCharCode(65 + index)}
-                </span>
-                <span className="rail-name">
-                  {character.name}
-                  <small>Conversation</small>
-                </span>
-                <MessageCircle size={16} />
-              </button>
-            ))}
-            {props.characters.length === 0 && (
-              <p className="room-list-empty">No witnesses in this location.</p>
-            )}
-          </div>
-        </section>
-      </div>
+      <details className="scene-index">
+        <summary>
+          <span>People &amp; objects</span>
+          <span>{props.objects.length + props.characters.length}</span>
+        </summary>
+        <div className="room-action-rail">
+          <section
+            className="room-object-list"
+            aria-label="Objects in this room"
+          >
+            <h3>
+              Inspect the room <span>{props.objects.length}</span>
+            </h3>
+            <div>
+              {props.objects.map((object, index) => (
+                <button
+                  key={object.id}
+                  disabled={props.disabled}
+                  className={
+                    selection?.id === object.id && selection.type === "object"
+                      ? "selected"
+                      : ""
+                  }
+                  onClick={() => approach("object", index, object.id)}
+                >
+                  <span className="rail-code">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="rail-name">
+                    {object.title}
+                    <small>
+                      {object.discovered
+                        ? "In your notebook"
+                        : object.kind === "audio"
+                          ? "Audio record"
+                          : object.kind === "testimony"
+                            ? "Witness account"
+                            : "Inspect"}
+                    </small>
+                  </span>
+                  {object.discovered ? (
+                    <Check size={15} />
+                  ) : (
+                    <ArrowRight size={15} />
+                  )}
+                </button>
+              ))}
+              {props.objects.length === 0 && (
+                <p className="room-list-empty">
+                  No objects available here yet.
+                </p>
+              )}
+            </div>
+          </section>
+          <section
+            className="room-person-list"
+            aria-label="People in this room"
+          >
+            <h3>
+              Speak to someone <span>{props.characters.length}</span>
+            </h3>
+            <div>
+              {props.characters.map((character, index) => (
+                <button
+                  key={character.id}
+                  disabled={props.disabled}
+                  className={
+                    selection?.id === character.id &&
+                    selection.type === "person"
+                      ? "selected"
+                      : ""
+                  }
+                  onClick={() => approach("person", index, character.id)}
+                >
+                  <span className="rail-code person-code">
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  <span className="rail-name">
+                    {character.name}
+                    <small>Conversation</small>
+                  </span>
+                  <MessageCircle size={16} />
+                </button>
+              ))}
+              {props.characters.length === 0 && (
+                <p className="room-list-empty">
+                  No witnesses in this location.
+                </p>
+              )}
+            </div>
+          </section>
+        </div>
+      </details>
       <p className="room-instruction" role="status">
         <span className={walking ? "is-travelling" : ""} aria-hidden="true" />
         {walking

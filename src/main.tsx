@@ -36,18 +36,18 @@ import {
   Compass,
   LoaderCircle,
 } from "lucide-react";
-import "./style.css";
+import "./theme.css";
 import { World, GameCharacter } from "./game/World";
 import { Opening } from "./game/Opening";
 import { GameSound } from "./game/sound";
 import { VoiceChat } from "./game/VoiceChat";
+import { waitForServer } from "./game/serverReady";
 import { speechWav } from "./game/voiceCapture";
 import { PartnerLink } from "./game/PartnerLink";
 import { InvestigationScene } from "./game/InvestigationScene";
 import type { RadioPacket } from "./game/PartnerRadio";
-import "./game/game.css";
+
 import { CaseNotebook } from "./game/CaseNotebook";
-import "./game/mystery.css";
 
 type Case = {
   id: string;
@@ -254,11 +254,13 @@ function Modal({
   children,
   onClose,
   wide = false,
+  variant = "",
 }: {
   title: string;
   children: React.ReactNode;
   onClose: () => void;
   wide?: boolean;
+  variant?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -299,7 +301,7 @@ function Modal({
   }, []);
   return (
     <div
-      className="modal-shade"
+      className={"modal-shade " + variant}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -362,58 +364,34 @@ function StoryText({
     </span>
   );
 }
-function Mission({
-  room,
-  token,
-  onFollow,
-  onSwitch,
-  onCommunicate,
-  busy,
-}: {
-  room: Room;
-  token: string;
-  onFollow: () => void;
-  onSwitch: () => void;
-  onCommunicate: () => void;
-  busy: boolean;
-}) {
-  const o = room.objective!,
-    partner = room.players.find((p) => p.id !== room.you.id);
+function Mission({ room, token }: { room: Room; token: string }) {
+  const o = room.objective!;
   return (
-    <section className="team-guide case-status" aria-label="Case progress">
-      <span className="eyebrow">
-        CHAPTER {o.chapter} / 3 · {o.chapter_title}
-      </span>
-      <h2>
-        <StoryText text={o.team_question} room={room} token={token} />
-      </h2>
-      <div className="role-strip">
-        <span>
-          <strong>You</strong> · {room.case.roles[room.you.role]?.subtitle}
+    <details className="chapter-bar">
+      <summary>
+        <span className="chapter-number">
+          {String(o.chapter).padStart(2, "0")} / 03
         </span>
-        <span>
-          <strong>{partner?.name || "Other perspective"}</strong> ·{" "}
-          {
-            room.case.roles[room.you.role === "field" ? "archive" : "field"]
-              ?.subtitle
-          }
-        </span>
+        <strong>{o.chapter_title}</strong>
+        <span className="chapter-more">Case details</span>
+      </summary>
+      <div className="chapter-popover">
+        <p>
+          <StoryText text={o.team_question} room={room} token={token} />
+        </p>
+        <p className="muted">
+          {room.case.roles[room.you.role].subtitle} Compare your observations
+          with your partner’s account.
+        </p>
       </div>
-      <button className="text-button" onClick={onCommunicate} disabled={busy}>
-        Talk to your partner <ArrowRight size={15} />
-      </button>
-      {room.solo && (
-        <button className="text-button" onClick={onSwitch}>
-          Switch perspective <RefreshCw size={15} />
-        </button>
-      )}
-    </section>
+    </details>
   );
 }
 
 function App() {
+  const [waking, setWaking] = useState(false);
   const [cases, setCases] = useState<Case[]>([]),
-    [selected, setSelected] = useState(0),
+    [selected, setSelected] = useState(1),
     [room, setRoom] = useState<Room | null>(null),
     [token, setToken] = useState("");
   const [soundOn, setSoundOn] = useState(false),
@@ -529,26 +507,42 @@ function App() {
     }
   }, [room?.status]);
   useEffect(() => {
-    request("/cases")
-      .then(setCases)
-      .catch((e) => setError(e.message));
-    request("/health")
-      .then((d) => setAccessRequired(Boolean(d.access_required)))
-      .catch(() => {});
-    const saved = sessionStorage.getItem("duniya-session");
-    if (saved) {
-      try {
-        const s = JSON.parse(saved);
-        request("/rooms/" + s.code, undefined, s.token)
-          .then((r) => {
-            setToken(s.token);
-            sync(r);
-          })
-          .catch(() => sessionStorage.removeItem("duniya-session"));
-      } catch {
-        sessionStorage.removeItem("duniya-session");
-      }
+    const initial = new AbortController();
+    void waitForServer(() => setWaking(true), initial.signal)
+      .then(async () => {
+        if (initial.signal.aborted) return;
+        setWaking(false);
+        const [catalog, health] = await Promise.all([
+          request("/cases"),
+          request("/health"),
+        ]);
+        if (initial.signal.aborted) return;
+        setCases(catalog);
+        setAccessRequired(Boolean(health.access_required));
+        const saved = sessionStorage.getItem("duniya-session");
+        if (saved && !invite) {
+          try {
+            const s = JSON.parse(saved);
+            request("/rooms/" + s.code, undefined, s.token)
+              .then((r) => {
+                setToken(s.token);
+                sync(r);
+              })
+              .catch(() => sessionStorage.removeItem("duniya-session"));
+          } catch {
+            sessionStorage.removeItem("duniya-session");
+          }
+        }
+      })
+      .catch((e) => {
+        if (!initial.signal.aborted) setError(e.message);
+      });
+    const invite = new URLSearchParams(window.location.search).get("room");
+    if (invite && /^[A-Z2-9]{6}$/i.test(invite)) {
+      setCode(invite.toUpperCase());
+      setSetup("join");
     }
+    return () => initial.abort();
   }, []);
   useEffect(() => {
     if (!room || !token) return;
@@ -824,6 +818,7 @@ function App() {
     const r = await act("inspect", { target: id });
     if (r) {
       setClue(r.evidence.find((e) => e.id === id) || null);
+      setToast("Added to your notebook.");
     }
   }
   async function ask(topic = "") {
@@ -1050,11 +1045,22 @@ function App() {
       </div>
     );
   }
+  if (waking && !room)
+    return (
+      <div className="wake-screen" role="status" aria-live="polite">
+        <LoaderCircle size={36} className="spin" />
+        <h1>Waking the casebook…</h1>
+        <p>
+          The test server is starting. Your invitation is safe. This can take
+          about a minute.
+        </p>
+      </div>
+    );
   const caseItem = cases[selected];
   if (!room)
     return (
       <>
-        <div className="landing">
+        <div className="landing" data-case={caseItem?.id || "blue-carbuncle"}>
           <nav className="landing-nav">
             <Mark />
             <span className="nav-caption">AN INVESTIGATION FOR TWO</span>
@@ -1074,9 +1080,9 @@ function App() {
                   <em>One big mystery.</em>
                 </h1>
                 <p>
-                  A midnight train. A vanished station master.
-                  <br />
-                  Your friend has the other half of the story.
+                  {caseItem?.id === "blue-carbuncle"
+                    ? "A stolen jewel. A missing goose. Two trails that meet in the fog."
+                    : "A midnight train. A vanished station master. Your friend has the other half of the story."}
                 </p>
                 <div className="hero-actions">
                   <button
@@ -1087,7 +1093,7 @@ function App() {
                       setSetup("create");
                     }}
                   >
-                    Play the mystery <ArrowUpRight size={19} />
+                    Create room <ArrowUpRight size={19} />
                   </button>
                   <button
                     className="secondary"
@@ -1098,6 +1104,17 @@ function App() {
                 </div>
                 <div className="hero-foot">
                   <span>
+                    <Search size={15} /> Explore
+                  </span>
+                  <span>
+                    <Mic size={15} /> Compare accounts
+                  </span>
+                  <span>
+                    <Fingerprint size={15} /> Solve together
+                  </span>
+                </div>
+                <div className="hero-foot" hidden>
+                  <span>
                     <Users size={15} /> 2 investigators
                   </span>
                   <span>
@@ -1105,13 +1122,16 @@ function App() {
                   </span>
                 </div>
               </div>
-              <div className={"hero-art " + (selected === 1 ? "blue" : "")}>
+              <div
+                aria-label="Selected case illustration"
+                className={"hero-art " + (selected === 1 ? "blue" : "")}
+              >
                 <SceneArt blue={selected === 1} />
                 <div className="art-top">
                   <span>CASE FILE / {caseItem?.number || "01"}</span>
                   <Fingerprint size={27} />
                 </div>
-                <div className="art-bottom">
+                <div className="art-bottom" hidden>
                   <span className="eyebrow">{caseItem?.eyebrow}</span>
                   <h2>{caseItem?.title || "The Last Announcement"}</h2>
                   <span className="art-caption">
@@ -1393,7 +1413,10 @@ function App() {
     ? room.evidence.find((e) => e.id === clue.id) || clue
     : null;
   return (
-    <div className={"game " + (room.status === "paused" ? "game-paused" : "")}>
+    <div
+      data-case={room.case.id}
+      className={"game " + (room.status === "paused" ? "game-paused" : "")}
+    >
       <header className="game-header">
         <button
           className="brand-button"
@@ -1405,6 +1428,9 @@ function App() {
         <div className="game-title">
           <span className="eyebrow">CASE {room.case.number}</span>
           <strong>{room.case.title}</strong>
+          <span className="role-chip">
+            You: {room.you.role === "field" ? "Field" : "Records"}
+          </span>
         </div>
         <div className="game-header-right">
           {room.timer.enabled &&
@@ -1438,8 +1464,12 @@ function App() {
               } else void enableSound();
             }}
             aria-pressed={soundOn}
+            aria-label={soundOn ? "Mute sound" : "Enable sound"}
           >
-            {soundOn ? "♫ Sound on" : "♫ Enable sound"}
+            <Headphones size={18} />
+            <span className="sound-label">
+              {soundOn ? "Sound on" : "Enable sound"}
+            </span>
           </button>
           {soundOn && (
             <label
@@ -1485,6 +1515,26 @@ function App() {
             <Compass size={21} />
           </button>
         </div>
+        <button
+          className="icon invite-copy"
+          title="Copy invitation link"
+          aria-label="Copy invitation link"
+          onClick={() => {
+            const url = new URL(window.location.href);
+            url.search = "";
+            url.searchParams.set("room", room.code);
+            if (!navigator.clipboard) {
+              setError("Copy this room code: " + room.code);
+              return;
+            }
+            void navigator.clipboard
+              .writeText(url.toString())
+              .then(() => setToast("Invitation link copied"))
+              .catch(() => setError("Copy this room code: " + room.code));
+          }}
+        >
+          <Link2 size={18} />
+        </button>
       </header>
       {error && (
         <div className="inline-error" role="alert">
@@ -1710,7 +1760,7 @@ function App() {
                   </button>
                 )}
               </div>
-              <span className="eyebrow rail-label">LOCATIONS</span>
+
               <nav aria-label="Investigation locations">
                 {room.locations.map((l, i) => (
                   <button
@@ -1725,11 +1775,7 @@ function App() {
                     <span className="location-number">0{i + 1}</span>
                     <span>
                       {l.name}
-                      <small>
-                        {l.locked
-                          ? "Your partner will find the way here"
-                          : "Available to explore"}
-                      </small>
+                      {l.locked && <small>Unreached</small>}
                     </span>
                     {!l.locked && <ChevronRight size={15} />}
                   </button>
@@ -1737,7 +1783,7 @@ function App() {
               </nav>
               <div className="rail-bottom">
                 <Fingerprint size={34} />
-                <p>New clues appear in both notebooks automatically.</p>
+
                 {room.solo && (
                   <button
                     className="text-button"
@@ -1753,45 +1799,7 @@ function App() {
               </div>
             </aside>
             <main className="scene-column">
-              {room.objective && (
-                <Mission
-                  room={room}
-                  token={token}
-                  busy={busy}
-                  onFollow={() => {
-                    const a = room.objective!.action;
-                    if (a.kind === "location") {
-                      setLocationId(a.target!);
-                      setWitness(null);
-                      setClue(null);
-                      if (a.evidence_id) {
-                        const e = room.evidence.find(
-                          (e) => e.id === a.evidence_id,
-                        );
-                        if (e) setClue(e);
-                        else void inspect(a.evidence_id);
-                      }
-                    } else if (a.kind === "character") {
-                      const c = room.characters.find((c) => c.id === a.target);
-                      if (c) {
-                        setLocationId(c.location);
-                        setWitness(c);
-                        setDialogue(c.initial);
-                        setQuestion("");
-                      }
-                    } else if (a.kind === "partner") {
-                      void act("message", {
-                        text: room.objective!.communication,
-                      });
-                      window.dispatchEvent(new Event("partner-open"));
-                    } else setModal(a.kind === "theory" ? "theory" : "board");
-                  }}
-                  onCommunicate={() =>
-                    window.dispatchEvent(new Event("partner-open"))
-                  }
-                  onSwitch={() => void act("switch")}
-                />
-              )}
+              {room.objective && <Mission room={room} token={token} />}
               <div className="scene-topline">
                 <span>
                   <MapPin size={14} /> {activeLocation?.name}
@@ -1802,21 +1810,27 @@ function App() {
               </div>
               <div className="scene-summary">
                 <h1>{activeLocation?.name}</h1>
-                <p>
-                  {activeLocation && (
-                    <StoryText
-                      text={activeLocation.description}
-                      room={room}
-                      token={token}
-                    />
-                  )}
-                </p>
+                <details className="location-description">
+                  <summary>Look around</summary>
+                  <p>
+                    {activeLocation && (
+                      <StoryText
+                        text={activeLocation.description}
+                        room={room}
+                        token={token}
+                      />
+                    )}
+                  </p>
+                </details>
               </div>
               <InvestigationScene
                 key={room.code + "|" + room.you.role + "|" + locationId}
                 location={locationId}
                 blue={room.case.id === "blue-carbuncle"}
-                playerName={room.you.name}
+                playerName={
+                  room.you.name.charAt(0).toLocaleUpperCase() +
+                  room.you.name.slice(1)
+                }
                 objects={room.objects
                   .filter((o) => o.location === locationId)
                   .map((o) =>
@@ -1853,34 +1867,40 @@ function App() {
               {room.scene_audio
                 ?.filter((a) => a.location === locationId)
                 .map((a) => (
-                  <section className="earwitness-player" key={a.id}>
-                    <div>
-                      <Radio size={22} />
-                      <span>
-                        <strong>{a.title}</strong>
-                        <small>{a.caption}</small>
-                      </span>
+                  <details className="earwitness-player" key={a.id}>
+                    <summary>
+                      <Radio size={16} />
+                      {a.title}
+                    </summary>
+                    <div className="audio-popover">
+                      <div>
+                        <Radio size={22} />
+                        <span>
+                          <strong>{a.title}</strong>
+                          <small>{a.caption}</small>
+                        </span>
+                      </div>
+                      <button
+                        className="secondary"
+                        disabled={
+                          voiceBusy ||
+                          !room.providers.timbre ||
+                          room.status !== "playing"
+                        }
+                        onClick={async () => {
+                          if (!soundOn) await enableSound();
+                          void listen(a.text, "station_announcer");
+                        }}
+                      >
+                        {speaking ? <Square size={16} /> : <Play size={16} />}{" "}
+                        {speaking ? "Stop playback" : "Listen"}
+                      </button>
+                      <details>
+                        <summary>Read the words</summary>
+                        <p>{a.text}</p>
+                      </details>
                     </div>
-                    <button
-                      className="secondary"
-                      disabled={
-                        voiceBusy ||
-                        !room.providers.timbre ||
-                        room.status !== "playing"
-                      }
-                      onClick={async () => {
-                        if (!soundOn) await enableSound();
-                        void listen(a.text, "station_announcer");
-                      }}
-                    >
-                      {speaking ? <Square size={16} /> : <Play size={16} />}{" "}
-                      {speaking ? "Stop playback" : "Listen"}
-                    </button>
-                    <details>
-                      <summary>Read the words</summary>
-                      <p>{a.text}</p>
-                    </details>
-                  </section>
+                  </details>
                 ))}
             </main>
           </div>
@@ -1895,7 +1915,16 @@ function App() {
             <div>
               <button onClick={() => setModal("board")}>
                 <NotebookPen size={17} /> Our notebook{" "}
-                <span>{room.evidence.length}</span>
+                <span
+                  key={room.evidence.length}
+                  className={
+                    room.evidence.length
+                      ? "evidence-count new-count"
+                      : "evidence-count"
+                  }
+                >
+                  {room.evidence.length}
+                </span>
               </button>
               <button
                 className="theory-button"
@@ -1907,7 +1936,7 @@ function App() {
                   ? "Check your partner’s answers"
                   : room.can_solve
                     ? "Solve the case together"
-                    : "Find clues to unlock the ending"}
+                    : "Build your case"}
                 <ArrowRight size={16} />
               </button>
             </div>
@@ -1921,6 +1950,9 @@ function App() {
             </div>
           )}
         </>
+      )}
+      {room.case.id === "blue-carbuncle" && room.status === "playing" && (
+        <span className="case-attribution">After A. Conan Doyle · 1892</span>
       )}
       {!room.solo && room.status === "playing" && !opening && (
         <PartnerLink
@@ -1969,7 +2001,11 @@ function App() {
         </div>
       )}
       {shownClue && (
-        <Modal title={shownClue.title} onClose={() => setClue(null)}>
+        <Modal
+          variant="clue-reader"
+          title={shownClue.title}
+          onClose={() => setClue(null)}
+        >
           <div className="document-meta">
             <span>{shownClue.kind.toUpperCase()}</span>
             <span>EVIDENCE / {shownClue.id.toUpperCase()}</span>
@@ -1996,26 +2032,20 @@ function App() {
             )}
           </div>
           {soundControls(shownClue.text)}
+          <button className="primary full" onClick={() => setClue(null)}>
+            Back to the scene <ArrowRight size={16} />
+          </button>
           {translation && (
             <div className="translation" lang={room.you.language}>
               <small>GEMINI TRANSLATION · UNREVIEWED</small>
               <p>Displayed above · matches the spoken passage.</p>
             </div>
           )}
-          <div className="notebook-confirmation">
-            <CheckCircle2 size={19} />
-            <div>
-              <strong>Added to both players’ notebooks</strong>
-              <p>
-                Your partner can read this exact clue now. Talk about what it
-                changes in your explanation.
-              </p>
-            </div>
-          </div>
         </Modal>
       )}
       {witness && currentWitness && (
         <Modal
+          variant="dialogue-sheet"
           title={currentWitness.name}
           onClose={() => {
             cancelRecording();
@@ -2145,7 +2175,7 @@ function App() {
             {currentWitness.topics.length > 3 && (
               <details className="extra-topics">
                 <summary>
-                  More things to ask about ({currentWitness.topics.length - 3})
+                  More topics ({currentWitness.topics.length - 3})
                 </summary>
                 <div className="topics">
                   {currentWitness.topics.slice(3).map((t) => (
