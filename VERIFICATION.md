@@ -215,3 +215,11 @@ sharing. This revision deliberately supersedes the prior private/shared-clue UX.
   the active flow. Radio is optional beside text discussion prompts.
 - Visual checks are static component renders and compilation. Browser control
   remains disabled; the simpler presentation is not claimed as device-playtested.
+
+## Mystery-room v7 checks
+
+67 backend tests passed, including shared hint budget, failed-provider hint accounting, duplicate-tab takeover, original-preserving partner translation, translation failure and audio-cache validation. Six notebook SSR variants were checked separately. The presentation script renders 16 scene/intro/character variants. The scene geometry script checks 144 layouts and 7,224 routes at widths 320/375/768/1024. Existing sound graph and pause detection checks pass.
+
+These are programmatic checks, not a two-human playtest or proof of perceptual voice quality. Browser control is unavailable in this session, so visual behavior, microphone permissions, mobile autoplay and native-speaker translation quality still require device testing.
+
+Live synthetic Hindi-to-Telugu partner relay: original preserved, Telugu script accepted, 23:47 retained; message endpoint 2.20s and Timbre endpoint 2.19s returned a valid 7.2s WAV. Two earlier attempts delivered the original with a translation warning; one diagnostic identified copied Hindi. An explicit target-language/native-script instruction fixed this sample. Three Gemini attempts and one Timbre request total. The audio was validated structurally, not listened to, and native-speaker accuracy is not claimed.

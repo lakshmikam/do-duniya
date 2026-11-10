@@ -1,13 +1,12 @@
 {
-  "version": "simple-coop-v6",
+  "version": "mystery-room-v7",
   "features": [
-    "clear-team-tasks",
-    "suggested-partner-questions",
-    "automatic-team-notebook",
-    "tap-to-investigate",
-    "single-screen-introduction",
-    "optional-partner-radio",
-    "hands-free-character-voices",
-    "notebook-included-in-final-answers"
+    "bound-case-notebook",
+    "three-team-hints",
+    "translated-partner-messages",
+    "spoken-partner-translations",
+    "numbered-scene-markers",
+    "safe-character-approaches",
+    "single-tab-player-control"
   ]
 }

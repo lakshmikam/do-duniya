@@ -2,7 +2,7 @@
 
 A two-player mystery with complementary roles, voice conversations and an automatic
 team notebook. One player investigates the scene; the other checks the records.
-Each sees a clear next task and a specific question to discuss with their partner.
+Both see the chapter question; optional notebook hints help when they are stuck.
 
 Current playtest build: https://do-duniya-test.onrender.com (invitation protected).
 
@@ -10,7 +10,7 @@ Current playtest build: https://do-duniya-test.onrender.com (invitation protecte
 
 - Tap a person or clue to investigate; movement and opening happen together.
 - Discovered clues appear in both players’ notebooks automatically.
-- Ask the suggested partner question through text or optional radio.
+- Compare findings through typed or spoken translated messages, or optional raw radio.
 - Agree on three answers; the notebook is included automatically.
 
 The confusing manual-sharing step, extra power-switch puzzle, hiding/keepsakes,
@@ -70,3 +70,11 @@ Research included We Were Here, Keep Talking and Nobody Explodes, Operation: Tan
 and Tick Tock. Those are design references, not sources of copied assets or scripts.
 The current revision follows direct player feedback prioritizing clarity over the
 previous feature-heavy prototype.
+
+## Mystery-room revision
+
+The shared notebook now has bound pages and stable page selection during live updates. Room markers are numbered, with descriptions outside the scene. Three optional hints are shared by the team and filed in the notebook; the assistant routes questions to authored guidance rather than inventing case facts.
+
+Partners can send a typed or completed spoken message in different selected languages. Prisma transcribes, Gemini translates, and optional Timbre playback reads the recipient version. Originals remain visible. Failed translation delivers the original with a warning, and never speaks an untranslated message as the target language. Hold-to-talk radio is a separate untranslated option. One tab controls each player; a second tab requires an explicit takeover.
+
+For an independent Claude critique, use CLAUDE_REVIEW_BRIEF.md with the current screenshots/source. No Claude review has been performed by this app.
