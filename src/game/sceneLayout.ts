@@ -45,13 +45,16 @@ export function sceneLayout(
   objectCount: number,
   actorCount: number,
   availableHeight?: number,
+  actorFeet?: ScenePoint[],
+  objectPoints?: ScenePoint[],
 ): SceneLayout {
   const width = Math.max(280, rawWidth),
     small = width < 500,
     staged = width >= 1000 && (availableHeight || 720) >= 600;
+  const illustrated = staged && actorFeet !== undefined;
   const markerSize = 48,
-    actorWidth = staged ? 112 : small ? 64 : 76,
-    playerWidth = staged ? 105 : small ? 38 : 44;
+    actorWidth = illustrated ? 210 : staged ? 112 : small ? 64 : 76,
+    playerWidth = illustrated ? 105 : staged ? 105 : small ? 38 : 44;
   const columns = Math.min(
     Math.max(1, objectCount),
     small ? 3 : width < 850 ? 4 : 5,
@@ -68,12 +71,12 @@ export function sceneLayout(
     ? Math.max(200, rows * 62 + 100, Math.floor(availableHeight))
     : naturalHeight;
   const actorHeight = Math.min(
-    staged ? 180 : small ? 102 : 120,
-    Math.floor(height * (staged ? 0.26 : 0.3)),
+    illustrated ? 360 : staged ? 180 : small ? 102 : 120,
+    Math.floor(height * (illustrated ? 0.51 : staged ? 0.26 : 0.3)),
   );
   const playerHeight = Math.min(
-    staged ? 176 : small ? 76 : 86,
-    Math.floor(height * (staged ? 0.25 : 0.24)),
+    illustrated ? 176 : staged ? 176 : small ? 76 : 86,
+    Math.floor(height * (illustrated ? 0.25 : staged ? 0.25 : 0.24)),
   );
   const frontLane = height - 16;
   const actorXs =
@@ -85,9 +88,11 @@ export function sceneLayout(
             { length: actorCount },
             (_, i) => 0.19 + (i * 0.62) / Math.max(1, actorCount - 1),
           );
-  const actors: SceneSlot[] = actorXs.map((f) => {
-    const x = width * f,
-      y = height * (height < 400 ? 0.64 : staged ? 0.7 : 0.72);
+  const actors: SceneSlot[] = actorXs.map((f, index) => {
+    const x = actorFeet?.[index]?.x ?? width * f,
+      y =
+        actorFeet?.[index]?.y ??
+        height * (height < 400 ? 0.64 : staged ? 0.7 : 0.72);
     return {
       x,
       y,
@@ -99,10 +104,13 @@ export function sceneLayout(
     const col = i % columns,
       row = Math.floor(i / columns),
       x =
-        columns === 1
+        objectPoints?.[i]?.x ??
+        (columns === 1
           ? width * 0.27
-          : width * (0.17 + (col * 0.66) / (columns - 1)),
-      y = height * (height < 400 ? 0.16 : 0.22) + row * 62;
+          : width * (0.17 + (col * 0.66) / (columns - 1))),
+      y =
+        objectPoints?.[i]?.y ??
+        height * (height < 400 ? 0.16 : 0.22) + row * 62;
     return {
       x,
       y,
@@ -174,7 +182,13 @@ export function sceneLayout(
     playerWidth,
     playerHeight,
     frontLane,
-    spawn: { x: padding + playerWidth / 2, y: frontLane },
+    spawn: [
+      padding + playerWidth / 2,
+      width - padding - playerWidth / 2,
+      ...corridorXs,
+    ]
+      .map((x) => ({ x, y: frontLane }))
+      .find(safe) || { x: padding + playerWidth / 2, y: frontLane },
     objects,
     actors,
   };
@@ -191,10 +205,115 @@ export function scenePath(
     { x: destination.x, y: layout.frontLane },
     destination,
   ];
+  const obstacles = [...layout.objects, ...layout.actors].map((s) => s.bounds);
+  const clear = (a: ScenePoint, b: ScenePoint) => {
+    const swept = {
+      left: Math.min(a.x, b.x) - layout.playerWidth / 2,
+      top: Math.min(a.y, b.y) - layout.playerHeight,
+      width: Math.abs(a.x - b.x) + layout.playerWidth,
+      height: Math.abs(a.y - b.y) + layout.playerHeight,
+    };
+    return obstacles.every((r) => !overlaps(swept, r, 8));
+  };
   let previous = start;
-  return points.filter((p) => {
-    const useful = Math.hypot(p.x - previous.x, p.y - previous.y) > 1;
-    if (useful) previous = p;
-    return useful;
-  });
+  if (
+    points.every((p) => {
+      const valid = clear(previous, p);
+      previous = p;
+      return valid;
+    })
+  ) {
+    previous = start;
+    return points.filter((p) => {
+      const useful = Math.hypot(p.x - previous.x, p.y - previous.y) > 1;
+      if (useful) previous = p;
+      return useful;
+    });
+  }
+  // Larger photographic sprites need routes around their actual silhouettes.
+  // A small rectilinear visibility grid keeps the whole moving sprite clear.
+  const xs = [
+    ...new Set([
+      start.x,
+      destination.x,
+      8 + layout.playerWidth / 2,
+      layout.width - 8 - layout.playerWidth / 2,
+      ...obstacles.flatMap((r) => [
+        r.left - layout.playerWidth / 2 - 9,
+        r.left + r.width + layout.playerWidth / 2 + 9,
+      ]),
+    ]),
+  ]
+    .filter(
+      (x) =>
+        x >= layout.playerWidth / 2 + 8 &&
+        x <= layout.width - layout.playerWidth / 2 - 8,
+    )
+    .sort((a, b) => a - b);
+  const ys = [
+    ...new Set([
+      start.y,
+      destination.y,
+      layout.playerHeight + 8,
+      layout.frontLane,
+      ...obstacles.flatMap((r) => [
+        r.top - 9,
+        r.top + r.height + layout.playerHeight + 9,
+      ]),
+    ]),
+  ]
+    .filter((y) => y >= layout.playerHeight + 8 && y <= layout.frontLane)
+    .sort((a, b) => a - b);
+  const nodes = ys.flatMap((y) => xs.map((x) => ({ x, y }))),
+    valid = nodes.map((p) => clear(p, p)),
+    from = nodes.findIndex((p) => p.x === start.x && p.y === start.y),
+    goal = nodes.findIndex(
+      (p) => p.x === destination.x && p.y === destination.y,
+    );
+  if (from < 0 || goal < 0 || !valid[from] || !valid[goal]) return [];
+  const distance = new Array(nodes.length).fill(Infinity),
+    parents = new Array(nodes.length).fill(-1),
+    pending = new Set<number>([from]);
+  distance[from] = 0;
+  while (pending.size) {
+    let at = -1;
+    for (const n of pending) if (at < 0 || distance[n] < distance[at]) at = n;
+    pending.delete(at);
+    if (at === goal) break;
+    const col = at % xs.length,
+      row = Math.floor(at / xs.length);
+    for (const next of [
+      col > 0 ? at - 1 : -1,
+      col < xs.length - 1 ? at + 1 : -1,
+      row > 0 ? at - xs.length : -1,
+      row < ys.length - 1 ? at + xs.length : -1,
+    ]) {
+      if (next < 0 || !valid[next] || !clear(nodes[at], nodes[next])) continue;
+      const d =
+        distance[at] +
+        Math.abs(nodes[at].x - nodes[next].x) +
+        Math.abs(nodes[at].y - nodes[next].y);
+      if (d < distance[next]) {
+        distance[next] = d;
+        parents[next] = at;
+        pending.add(next);
+      }
+    }
+  }
+  if (!Number.isFinite(distance[goal])) return [];
+  const route: ScenePoint[] = [];
+  let at = goal;
+  while (at !== from) {
+    route.unshift(nodes[at]);
+    at = parents[at];
+  }
+  return route.filter(
+    (p, i) =>
+      i === route.length - 1 ||
+      i === 0 ||
+      !(
+        (route[i - 1].x === p.x && p.x === route[i + 1].x) ||
+        (route[i - 1].y === p.y && p.y === route[i + 1].y)
+      ),
+  );
 }

@@ -136,3 +136,80 @@ for (const width of [320, 375, 768, 1024, 1440])
 console.log(
   `${compact} compact layouts fit 200–600px allotted heights at all five requested widths, with collision checks. Not a browser viewport test.`,
 );
+
+// New artwork placements: include routes between every available target.
+await fs.writeFile(
+  path.join(scratch, "artwork.mjs"),
+  ts.transpileModule(await fs.readFile("src/game/artwork.ts", "utf8"), {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.ESNext,
+    },
+  }).outputText,
+);
+const { ACTOR_FEET, CLUE_PINS } = await import(
+  pathToFileURL(path.join(scratch, "artwork.mjs"))
+);
+let illustratedRoutes = 0;
+for (const [location, ids, actors] of [
+  ["platform", ["seal", "tracks"], 2],
+  ["office", ["note", "receipt"], 0],
+  ["relay", ["found", "admission"], 0],
+  ["console", ["broadcast", "access"], 1],
+  ["records", ["docket", "route", "clock"], 0],
+  ["street", ["stone", "alpha"], 1],
+  ["market", ["supplier"], 1],
+  ["brixton", ["twins"], 1],
+  ["hotel", ["arrest", "visitor"], 1],
+  ["ledger", ["ryder", "cusack"], 0],
+]) {
+  const l = sceneLayout(
+      1200,
+      ids.length,
+      actors,
+      720,
+      ACTOR_FEET[location],
+      ids.map((id) => ({
+        x: CLUE_PINS[id][0] * 12,
+        y: CLUE_PINS[id][1] * 7.2,
+      })),
+    ),
+    targets = [...l.objects, ...l.actors],
+    points = [l.spawn, ...targets.map((s) => s.approach)];
+  for (const from of points)
+    for (const to of points) {
+      const route = scenePath(from, to, l);
+      assert.ok(
+        (from.x === to.x && from.y === to.y) || route.length > 0,
+        `No illustrated route in ${location}`,
+      );
+      let previous = from;
+      for (const next of route) {
+        for (let i = 0; i <= 30; i++) {
+          const t = i / 30,
+            r = playerRect(
+              {
+                x: previous.x + (next.x - previous.x) * t,
+                y: previous.y + (next.y - previous.y) * t,
+              },
+              l.playerWidth,
+              l.playerHeight,
+            );
+          assert.ok(
+            targets.every((s) => !overlaps(r, s.bounds, 7.9)),
+            `Artwork route overlap in ${location}`,
+          );
+        }
+        previous = next;
+      }
+      assert.deepEqual(
+        previous,
+        to,
+        `Artwork route must reach the target in ${location}`,
+      );
+      illustratedRoutes++;
+    }
+}
+console.log(
+  `${illustratedRoutes} artwork routes reach their targets without crossing a character or clue.`,
+);

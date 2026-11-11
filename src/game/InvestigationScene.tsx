@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { World, GameCharacter } from "./World";
 import { ArrowRight, Check, MessageCircle } from "lucide-react";
-import { sceneLayout, scenePath, type ScenePoint } from "./sceneLayout";
+import { ACTOR_FEET, CLUE_PINS, ROOM_ART, fitRoomCamera } from "./artwork";
+import { sceneLayout } from "./sceneLayout";
 
 type Props = {
   location: string;
@@ -17,13 +18,7 @@ type Selection = { type: "object" | "person"; id: string } | null;
 /** Scene presentation cannot grant evidence: all interactions call the parent. */
 export function InvestigationScene(props: Props) {
   const root = useRef<HTMLElement>(null),
-    stage = useRef<HTMLDivElement>(null),
-    latest = useRef(props),
-    timer = useRef<ReturnType<typeof setTimeout> | null>(null),
-    generation = useRef(0),
-    reduced = useRef(false),
-    current = useRef<ScenePoint>({ x: 28, y: 404 });
-  latest.current = props;
+    stage = useRef<HTMLDivElement>(null);
   const seen = useRef(
     new Set(props.objects.filter((o) => o.discovered).map((o) => o.id)),
   );
@@ -46,26 +41,38 @@ export function InvestigationScene(props: Props) {
   }, [foundKey]);
   const [width, setWidth] = useState(375),
     [availableHeight, setAvailableHeight] = useState(420),
-    [position, setPosition] = useState<ScenePoint>({ x: 28, y: 404 }),
-    [walking, setWalking] = useState(false),
-    [selection, setSelection] = useState<Selection>(null),
-    [duration, setDuration] = useState(300);
+    [selection, setSelection] = useState<Selection>(null);
+  const art =
+    ROOM_ART[props.location] || ROOM_ART[props.blue ? "street" : "platform"];
+  const camera = fitRoomCamera(width, availableHeight, art.width, art.height);
   const layout = useMemo(
-    () => sceneLayout(1200, props.objects.length, props.characters.length, 720),
-    [props.objects.length, props.characters.length],
+    () =>
+      sceneLayout(
+        1200,
+        props.objects.length,
+        props.characters.length,
+        720,
+        ACTOR_FEET[props.location],
+        props.objects.map((object, index) => {
+          const pin = CLUE_PINS[object.id] || [25 + index * 20, 30];
+          // Logical coordinates share one camera with the full regenerated image.
+          return { x: pin[0] * 12, y: pin[1] * 7.2 };
+        }),
+      ),
+    [
+      props.location,
+      props.objects.map((o) => o.id).join("|"),
+      props.characters.length,
+    ],
   );
-  function cancel(clearSelection = false) {
-    generation.current++;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-    setWalking(false);
-    if (clearSelection) setSelection(null);
-  }
   useLayoutEffect(() => {
     const element = root.current!;
     const measure = () => {
-      const next = Math.round(element.getBoundingClientRect().width);
-      const h = Math.round(stage.current?.getBoundingClientRect().height || 0);
+      const next = Math.floor(
+        stage.current?.getBoundingClientRect().width ||
+          element.getBoundingClientRect().width,
+      );
+      const h = Math.floor(stage.current?.getBoundingClientRect().height || 0);
       if (h > 0)
         setAvailableHeight((previous) =>
           Math.abs(previous - h) > 1 ? h : previous,
@@ -81,81 +88,12 @@ export function InvestigationScene(props: Props) {
     if (stage.current) observer.observe(stage.current);
     return () => observer.disconnect();
   }, []);
-  useLayoutEffect(() => {
-    cancel(true);
-    current.current = layout.spawn;
-    setPosition(layout.spawn);
-  }, [props.location, layout]);
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)"),
-      preference = () => {
-        reduced.current = query.matches;
-      };
-    preference();
-    query.addEventListener("change", preference);
-    const hide = () => {
-      if (document.hidden) cancel();
-    };
-    document.addEventListener("visibilitychange", hide);
-    return () => {
-      generation.current++;
-      if (timer.current) clearTimeout(timer.current);
-      query.removeEventListener("change", preference);
-      document.removeEventListener("visibilitychange", hide);
-    };
-  }, []);
-  useEffect(() => {
-    if (props.disabled) cancel();
-  }, [props.disabled]);
-  function approach(type: "object" | "person", index: number, id: string) {
+  useEffect(() => setSelection(null), [props.location]);
+  function approach(type: "object" | "person", _index: number, id: string) {
     if (props.disabled) return;
-    cancel();
-    const ticket = generation.current,
-      location = props.location,
-      slot = type === "person" ? layout.actors[index] : layout.objects[index];
-    if (!slot) return;
     setSelection({ type, id });
-    const arrive = () => {
-      setWalking(false);
-      timer.current = null;
-      if (
-        generation.current !== ticket ||
-        latest.current.disabled ||
-        latest.current.location !== location
-      )
-        return;
-      if (type === "person") latest.current.onTalk(id);
-      else latest.current.onInspect(id);
-    };
-    if (reduced.current) {
-      current.current = slot.approach;
-      setPosition(slot.approach);
-      arrive();
-      return;
-    }
-    const points = scenePath(current.current, slot.approach, layout);
-    function step() {
-      if (generation.current !== ticket || latest.current.disabled) return;
-      const next = points.shift();
-      if (!next) {
-        arrive();
-        return;
-      }
-      const ms = Math.max(
-        130,
-        Math.min(
-          430,
-          Math.hypot(next.x - current.current.x, next.y - current.current.y) /
-            0.68,
-        ),
-      );
-      setDuration(ms);
-      setWalking(true);
-      current.current = next;
-      setPosition(next);
-      timer.current = setTimeout(step, ms + 15);
-    }
-    step();
+    if (type === "person") props.onTalk(id);
+    else props.onInspect(id);
   }
   const selectedObject =
       selection?.type === "object"
@@ -183,8 +121,8 @@ export function InvestigationScene(props: Props) {
           className="scene-canvas"
           style={{
             width: 1200,
-            height: 720,
-            transform: `translate(-50%,-50%) scale(${Math.min(width / 1200, availableHeight / 720)})`,
+            height: camera.height,
+            transform: `translate(-50%,-50%) scale(${camera.scale})`,
           }}
         >
           <div className="room-world">
@@ -197,7 +135,10 @@ export function InvestigationScene(props: Props) {
           {focus && (
             <div
               className="room-inspection-light"
-              style={{ left: focus.x, top: focus.y }}
+              style={{
+                left: focus.x,
+                top: focus.y * camera.yFactor,
+              }}
               aria-hidden="true"
             />
           )}
@@ -216,9 +157,10 @@ export function InvestigationScene(props: Props) {
                 }
                 style={{
                   left: slot.x,
-                  top: slot.y,
-                  width: layout.markerSize,
-                  height: layout.markerSize,
+                  top: slot.y * camera.yFactor,
+                  width: Math.min(72, 44 / camera.scale),
+                  height: Math.min(72, 44 / camera.scale),
+                  fontSize: 14 / camera.scale,
                 }}
                 disabled={props.disabled}
                 onClick={() => approach("object", index, object.id)}
@@ -262,16 +204,15 @@ export function InvestigationScene(props: Props) {
                 key={character.id}
                 className={
                   "room-actor " +
-                  (position.x < slot.x ? "facing-left " : "facing-right ") +
                   (selection?.id === character.id && selection.type === "person"
                     ? "selected"
                     : "")
                 }
                 style={{
                   left: slot.x,
-                  top: slot.y,
-                  width: layout.actorWidth,
-                  height: layout.actorHeight,
+                  top: slot.y * camera.yFactor,
+                  width: layout.actorWidth * camera.yFactor * 1.2,
+                  height: layout.actorHeight * camera.yFactor * 1.2,
                 }}
                 disabled={props.disabled}
                 onClick={() => approach("person", index, character.id)}
@@ -287,19 +228,6 @@ export function InvestigationScene(props: Props) {
               </button>
             );
           })}
-          <div
-            className={"room-investigator " + (walking ? "walking" : "")}
-            style={{
-              left: position.x,
-              top: position.y,
-              width: layout.playerWidth,
-              height: layout.playerHeight,
-              transitionDuration: `${duration}ms`,
-            }}
-            aria-hidden="true"
-          >
-            <GameCharacter id="investigator" />
-          </div>
         </div>
       </div>
       <details className="scene-index" open={width < 650 ? true : undefined}>
@@ -396,14 +324,12 @@ export function InvestigationScene(props: Props) {
         </div>
       </details>
       <p className="room-instruction" role="status">
-        <span className={walking ? "is-travelling" : ""} aria-hidden="true" />
-        {walking
-          ? `Approaching ${selectedPerson?.name || selectedObject?.title || "the next lead"}…`
-          : props.disabled
-            ? "Close the conversation or document to continue."
-            : selection
-              ? `${props.playerName || "You"} · ${selectedPerson ? "With " + selectedPerson.name : selectedObject ? "Examining " + selectedObject.title : "Ready to continue"}`
-              : "Choose an object or person. You will walk over and investigate."}
+        <span aria-hidden="true" />
+        {props.disabled
+          ? "Close the conversation or document to continue."
+          : selection
+            ? `${props.playerName || "You"} · ${selectedPerson ? "With " + selectedPerson.name : selectedObject ? "Examining " + selectedObject.title : "Ready to continue"}`
+            : "Select a marked clue or speak with a witness."}
       </p>
     </section>
   );

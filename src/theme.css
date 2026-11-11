@@ -13,9 +13,9 @@
 }
 :root,
 [data-case="last-announcement"] {
-  --bg-0: #20282d;
-  --bg-1: #283237;
-  --bg-2: #344047;
+  --bg-0: #191e20;
+  --bg-1: #242b2c;
+  --bg-2: #303b3b;
   --ink: #eee8dc;
   --ink-dim: #c1c7c5;
   --accent: #c7b28a;
@@ -23,7 +23,7 @@
   --clue: #b6cbbd;
   --paper: #f3e7c9;
   --paper-ink: #3a2e1f;
-  --border: #697670;
+  --border: #65726c;
   --button-ink: #12191c;
   --paper-dim: #66553a;
   --paper-line: #c5b88f;
@@ -4596,4 +4596,680 @@ details[open] > summary {
 }
 .case-notebook .notebook-close {
   border-color: var(--border);
+}
+/* Supplied full room art and transparent in-scene character sprites. */
+.scene-artwork {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: none;
+}
+.hero-art > .scene-artwork,
+.case-mini > .scene-artwork,
+.lobby-cover > .scene-artwork {
+  object-fit: cover;
+}
+.case-mini > .scene-artwork,
+.lobby-cover > .scene-artwork {
+  position: absolute;
+  inset: 0;
+}
+.story-opening > .scene-artwork {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  opacity: 0.32;
+  pointer-events: none;
+}
+.illustrated-character {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+}
+.illustrated-character > .character-portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+.room-actor .game-character {
+  filter: drop-shadow(0 6px 4px var(--shadow));
+}
+.room-colour-grade,
+.room-floor-grid,
+.room-window-light {
+  display: none;
+}
+.clue-artwork {
+  margin: 0 0 16px;
+}
+.clue-artwork img {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+}
+.clue-artwork figcaption {
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-top: 7px;
+}
+.found-character {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 0 0 16px;
+}
+.found-character .character-portrait {
+  width: 90px;
+  max-height: 250px;
+  object-fit: contain;
+}
+
+/* Full scene presentation: larger witnesses and a readable investigation rail. */
+.scene-canvas {
+  left: 0;
+  top: 0;
+  transform-origin: top left;
+}
+.scene-canvas .room-world {
+  inset: 0;
+}
+.scene-canvas .room-world > .scene-artwork {
+  object-fit: cover;
+  object-position: center bottom;
+}
+.room-stage {
+  overflow: hidden;
+  background: var(--bg-0);
+}
+.scene-canvas .room-inspection-light {
+  display: none;
+}
+.room-actor .game-character {
+  filter: drop-shadow(0 5px 3px var(--shadow));
+}
+.room-actor.selected {
+  filter: none;
+}
+.location-rail nav button {
+  white-space: normal;
+}
+.dialogue-sheet .modal {
+  width: min(1060px, 100%);
+  height: auto;
+  max-height: calc(100dvh - 150px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 22px 24px 22px 220px;
+  gap: 12px;
+}
+.dialogue-sheet .modal > h2 {
+  margin-left: -196px;
+  padding-right: 50px;
+  min-height: 44px;
+  font-size: 34px;
+}
+.dialogue-sheet .conversation-person {
+  position: absolute;
+  left: 20px;
+  right: auto;
+  top: 88px;
+  bottom: 22px;
+  width: 174px;
+  height: auto;
+  max-height: 440px;
+  display: flex;
+  align-items: flex-end;
+}
+.dialogue-sheet .conversation-person .game-character {
+  width: 100%;
+  height: 100%;
+  max-height: 440px;
+}
+.dialogue-sheet .speech-bubble {
+  flex: 0 1 auto;
+  min-height: 110px;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+}
+.dialogue-sheet .dialogue {
+  font-size: 17px;
+  line-height: 1.65;
+}
+.dialogue-sheet .topics {
+  display: flex;
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 8px;
+  max-height: none;
+}
+.dialogue-sheet .topics button {
+  flex: 1 1 240px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  line-height: 1.4;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+.dialogue-sheet .extra-topics {
+  position: static;
+  align-self: stretch;
+}
+.dialogue-sheet .extra-topics[open] > .topics {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  max-height: 180px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.dialogue-sheet .voice-chat {
+  background: var(--clear);
+  border: 0;
+  padding: 0;
+}
+.dialogue-sheet .question-form {
+  min-width: 0;
+}
+@media (min-width: 901px) {
+  .investigation-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 22px;
+    padding: 14px 24px;
+  }
+  .location-rail {
+    padding: 10px 20px 8px 0;
+    border-right: 1px solid var(--border);
+    gap: 24px;
+  }
+  .role-heading > .eyebrow {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.13em;
+    margin-bottom: 12px;
+  }
+  .role-heading h3 {
+    font-size: 34px;
+    line-height: 1.12;
+    margin: 0;
+  }
+  .role-heading p {
+    display: block;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-dim);
+    margin-top: 14px;
+  }
+  .location-rail nav {
+    gap: 10px;
+  }
+  .location-rail nav button {
+    padding: 16px 12px;
+    font-size: 17px;
+    min-height: 64px;
+    border-radius: 10px;
+  }
+  .rail-bottom .text-button {
+    font-size: 14px;
+  }
+  .scene-summary h1 {
+    font-size: 34px;
+  }
+  .chapter-bar strong {
+    font-size: 15px;
+  }
+  .room-instruction {
+    font-size: 14px;
+  }
+  .dialogue-sheet {
+    padding-left: 304px;
+    padding-right: 24px;
+  }
+}
+@media (min-width: 1500px) {
+  .investigation-layout {
+    grid-template-columns: 290px minmax(0, 1fr);
+  }
+  .dialogue-sheet {
+    padding-left: 334px;
+  }
+}
+@media (max-width: 650px) {
+  .dialogue-sheet .modal {
+    padding: 18px 16px;
+    max-height: calc(100dvh - 115px);
+  }
+  .dialogue-sheet .modal > h2 {
+    margin-left: 0;
+    font-size: 28px;
+    min-height: 36px;
+  }
+  .dialogue-sheet .conversation-person {
+    left: 12px;
+    top: 75px;
+    bottom: auto;
+    width: 90px;
+    height: 190px;
+  }
+  .dialogue-sheet .conversation-person .game-character {
+    height: 190px;
+    width: 90px;
+  }
+  .dialogue-sheet .speech-bubble {
+    margin-left: 96px;
+    min-height: 180px;
+    max-height: 240px;
+    padding: 10px;
+  }
+  .dialogue-sheet .dialogue {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .dialogue-sheet .topics button {
+    flex-basis: 100%;
+    font-size: 14px;
+  }
+  .dialogue-sheet .modal > h2 {
+    padding-right: 44px;
+  }
+}
+@media (max-height: 540px) {
+  .dialogue-sheet .modal {
+    max-height: calc(100dvh - 75px);
+    padding-left: 140px;
+  }
+  .dialogue-sheet .conversation-person {
+    width: 100px;
+    top: 65px;
+    max-height: 230px;
+  }
+  .dialogue-sheet .modal > h2 {
+    margin-left: -116px;
+  }
+  .dialogue-sheet .speech-bubble {
+    min-height: 65px;
+    max-height: 120px;
+  }
+}
+
+/* PNG alpha must remain intact: do not apply legacy SVG filters to cutouts. */
+.room-actor,
+.room-actor .game-character,
+.room-actor img {
+  filter: none !important;
+  background: transparent;
+}
+
+/* Preserve the supplied room composition: one camera, no cropping or stretch. */
+.scene-canvas {
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+}
+.scene-canvas .room-world > .scene-artwork {
+  object-fit: contain;
+  object-position: center;
+}
+@media (min-width: 901px) {
+  .investigation-layout {
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 24px;
+    padding: 16px 24px;
+  }
+  .location-rail {
+    --ink: #30291f;
+    --ink-dim: #514939;
+    --accent: #604b2d;
+    --bg-0: #c4b8a3;
+    --bg-1: #d3c8b5;
+    --bg-2: #b2a48c;
+    --border: #88785e;
+    background: var(--bg-0);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px 22px 20px;
+    gap: 24px;
+  }
+  .location-rail .role-heading h3 {
+    font-size: 36px;
+    color: var(--ink);
+  }
+  .location-rail .role-heading .eyebrow {
+    color: var(--ink-dim);
+  }
+  .location-rail nav button {
+    color: var(--ink);
+    border: 1px solid var(--border);
+    background: var(--bg-1);
+    min-height: 66px;
+  }
+  .location-rail nav button.active {
+    background: var(--bg-2);
+    box-shadow: inset 3px 0 var(--accent);
+    border-color: var(--accent);
+  }
+  .location-rail nav button:disabled {
+    opacity: 0.65;
+  }
+  .location-rail nav .location-number {
+    color: var(--ink-dim);
+  }
+  .location-rail .text-button {
+    color: var(--accent);
+  }
+  .dialogue-sheet {
+    padding-left: 388px;
+  }
+}
+@media (min-width: 1500px) {
+  .investigation-layout {
+    grid-template-columns: 380px minmax(0, 1fr);
+  }
+  .dialogue-sheet {
+    padding-left: 428px;
+  }
+}
+
+.room-object-marker .marker-number {
+  width: 100%;
+  height: 100%;
+  font-size: 20px;
+}
+
+/* Sprite buttons must never inherit the generic opaque hover/pressed surface.
+   Legacy SVG filters and disabled opacity also break alpha compositing in Chrome. */
+.room-view .room-actor,
+.room-view
+  .room-actor:is(
+    :hover,
+    :active,
+    :focus,
+    :focus-visible,
+    :disabled,
+    [aria-pressed="true"]
+  ),
+.room-view .room-actor .game-character,
+.room-view .room-actor .character-portrait {
+  background: transparent !important;
+  background-image: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+  mix-blend-mode: normal;
+  backdrop-filter: none;
+  transition: none;
+}
+.room-view
+  .room-actor:is(:hover, :focus-visible, [aria-pressed="true"])
+  .actor-letter {
+  background: var(--accent);
+  color: var(--button-ink);
+  border-color: var(--accent);
+}
+.room-view .room-actor:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+}
+.room-object-marker .marker-number {
+  font-size: inherit;
+}
+
+.room-view .room-actor:focus-visible {
+  outline: none;
+}
+.room-view .room-actor:focus-visible .actor-letter {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 3px;
+}
+
+/* Annotated review: always-visible tools and a shorter-screen game layout. */
+.location-rail {
+  overflow: hidden;
+}
+.location-rail > .role-heading {
+  flex-shrink: 0;
+}
+.location-rail > nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+}
+.rail-tools {
+  display: grid;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.rail-tools > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  text-align: left;
+  padding: 10px 12px;
+  white-space: normal;
+}
+.rail-tools .evidence-count {
+  margin-left: auto;
+}
+.rail-tools .theory-button > svg:last-child {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.rail-status {
+  font-size: 12px;
+  color: var(--ink-dim);
+  flex-shrink: 0;
+}
+.rail-bottom {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+.rail-tools button {
+  background: var(--bg-1);
+  color: var(--ink);
+  border-color: var(--border);
+  border-radius: 10px;
+}
+.rail-tools button:hover {
+  background: var(--bg-2);
+}
+.rail-tools .theory-button {
+  background: var(--accent);
+  color: var(--bg-0);
+}
+.rail-tools button:disabled {
+  opacity: 0.6;
+}
+@media (min-width: 901px) {
+  .location-rail {
+    gap: 14px;
+  }
+  .rail-bottom .text-button {
+    min-height: 36px;
+    padding: 4px 0;
+  }
+  .case-notebook-backdrop {
+    padding: 16px;
+    align-items: center;
+    justify-content: center;
+    background: var(--shade);
+    pointer-events: auto;
+  }
+  .case-notebook {
+    width: min(1080px, calc(100vw - 32px));
+    height: min(760px, calc(100dvh - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: 0;
+  }
+  .notebook-spread {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+  .notebook-binding {
+    left: 265px;
+  }
+  .notebook-index-page {
+    padding: 18px;
+    overflow: hidden;
+    gap: 8px;
+  }
+  .notebook-index-page > h3 {
+    font-size: 26px;
+    line-height: 1.15;
+    flex-shrink: 0;
+    margin: 0 0 6px;
+  }
+  .notebook-index-page > .notebook-small-caps {
+    flex-shrink: 0;
+    margin: 0;
+  }
+  .notebook-section-tabs {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin: 0 0 8px;
+    gap: 6px;
+    z-index: auto;
+  }
+  .case-notebook .notebook-section-tabs button {
+    font-size: 14px;
+    min-height: 48px;
+    white-space: normal;
+    line-height: 1.3;
+    padding: 8px;
+  }
+  .notebook-evidence-index {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .notebook-index-visibility {
+    display: none;
+  }
+  .case-notebook .notebook-index-title {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .case-notebook .notebook-page-scroll {
+    padding: 24px 30px;
+  }
+  .notebook-sheet {
+    padding: 16px 22px;
+  }
+  .notebook-page-navigation {
+    padding: 12px 24px;
+    flex-shrink: 0;
+  }
+}
+@media (min-width: 901px) and (max-height: 700px) {
+  .game-header {
+    min-height: 52px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .investigation-layout {
+    grid-template-columns: 290px minmax(0, 1fr);
+    padding: 10px 16px;
+    gap: 18px;
+  }
+  .location-rail {
+    padding: 16px;
+    gap: 10px;
+  }
+  .location-rail .role-heading h3 {
+    font-size: 28px;
+  }
+  .role-heading > .eyebrow {
+    margin-bottom: 6px;
+  }
+  .location-rail .role-heading p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .location-rail nav button {
+    min-height: 46px;
+    padding: 9px 10px;
+    font-size: 15px;
+  }
+  .location-rail nav {
+    gap: 8px;
+  }
+  .scene-column {
+    gap: 4px;
+  }
+  .scene-summary {
+    min-height: 34px;
+  }
+  .scene-summary h1 {
+    font-size: 29px;
+  }
+  .chapter-bar > summary {
+    min-height: 28px;
+  }
+  .room-instruction {
+    min-height: 42px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 12px;
+  }
+  .rail-status {
+    display: none;
+  }
+  .rail-tools > button {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  .dialogue-sheet {
+    padding: 8px 16px 16px 324px;
+  }
+  .dialogue-sheet .modal {
+    max-height: calc(100dvh - 80px);
+  }
+  .notebook-cover-label {
+    min-height: 48px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .case-notebook .notebook-page-scroll {
+    padding: 14px 22px;
+  }
+}
+@media (max-width: 900px) {
+  .location-rail {
+    overflow: visible;
+  }
+  .location-rail > nav {
+    flex: none;
+    overflow-x: auto;
+  }
+  .rail-tools {
+    display: flex;
+    gap: 6px;
+  }
+  .rail-tools > button {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    min-height: 44px;
+    padding: 7px 10px;
+  }
+  .rail-status {
+    display: none;
+  }
 }
