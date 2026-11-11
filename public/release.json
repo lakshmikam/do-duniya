@@ -1,5 +1,5 @@
 {
-  "version": "soft-scenes-v10",
+  "version": "illustrated-scenes-v11",
   "features": [
     "one-case-token-theme",
     "self-hosted-fonts",
@@ -7,15 +7,19 @@
     "chapter-details-popover",
     "notebook-side-drawer",
     "dialogue-bottom-sheet",
-    "five-london-scene-compositions",
     "room-invitation-links",
     "server-wake-screen",
     "translated-partner-messages",
     "no-invitation-code",
-    "shared-scene-camera",
-    "consistent-character-scale",
     "muted-case-palettes",
     "phone-action-list",
-    "nonoverlapping-dialogue-controls"
+    "nonoverlapping-dialogue-controls",
+    "wide-room-artwork",
+    "asset-dimension-camera",
+    "transparent-witness-cutouts",
+    "no-player-avatar",
+    "sidebar-investigation-tools",
+    "level-study-desk",
+    "wider-notebook-index"
   ]
 }
