@@ -437,9 +437,9 @@ export function CaseNotebook({
                       gets its own page, with the original passage kept intact.
                     </span>
                     <span>
-                      Share a discovery when your partner needs it. New entries
-                      will be marked in the index without moving the page you
-                      are reading.
+                      Both players receive each discovery automatically. New
+                      entries will be marked in the index without moving the
+                      page you are reading.
                     </span>
                   </div>
                 </article>

@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import "./theme.css";
 import { World, GameCharacter } from "./game/World";
+import { CharacterPortrait } from "./game/CharacterPortrait";
 import { Opening } from "./game/Opening";
 import { GameSound } from "./game/sound";
 import { VoiceChat } from "./game/VoiceChat";
@@ -1760,6 +1761,43 @@ function App() {
                   </button>
                 ))}
               </nav>
+              <div className="rail-tools" aria-label="Investigation tools">
+                <button onClick={() => setModal("board")}>
+                  <NotebookPen size={17} /> Our notebook{" "}
+                  <span
+                    key={room.evidence.length}
+                    className={
+                      room.evidence.length
+                        ? "evidence-count new-count"
+                        : "evidence-count"
+                    }
+                  >
+                    {room.evidence.length}
+                  </span>
+                </button>
+                <button
+                  className="theory-button"
+                  disabled={room.status !== "playing" || !room.can_solve}
+                  onClick={() => setModal("theory")}
+                >
+                  <Fingerprint size={17} />{" "}
+                  {room.proposal
+                    ? "Check your partner’s answers"
+                    : room.can_solve
+                      ? "Solve the case together"
+                      : "Build your case"}
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+              <div className="rail-status">
+                <span>
+                  <i className="status-dot" />
+                  {room.status === "paused"
+                    ? "INVESTIGATION PAUSED"
+                    : "THE CASE IS OPEN"}
+                  <small> · {LANGS[room.you.language]}</small>
+                </span>
+              </div>
               <div className="rail-bottom">
                 <Fingerprint size={34} />
 
@@ -1883,43 +1921,7 @@ function App() {
                 ))}
             </main>
           </div>
-          <footer className="game-toolbar">
-            <span>
-              <i className="status-dot" />
-              {room.status === "paused"
-                ? "INVESTIGATION PAUSED"
-                : "THE CASE IS OPEN"}
-              <small> · {LANGS[room.you.language]}</small>
-            </span>
-            <div>
-              <button onClick={() => setModal("board")}>
-                <NotebookPen size={17} /> Our notebook{" "}
-                <span
-                  key={room.evidence.length}
-                  className={
-                    room.evidence.length
-                      ? "evidence-count new-count"
-                      : "evidence-count"
-                  }
-                >
-                  {room.evidence.length}
-                </span>
-              </button>
-              <button
-                className="theory-button"
-                disabled={room.status !== "playing" || !room.can_solve}
-                onClick={() => setModal("theory")}
-              >
-                <Fingerprint size={17} />{" "}
-                {room.proposal
-                  ? "Check your partner’s answers"
-                  : room.can_solve
-                    ? "Solve the case together"
-                    : "Build your case"}
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </footer>
+
           {room.status === "paused" && (
             <div className="pause-banner" role="status">
               <Pause size={18} /> The investigation is paused for both players.
@@ -1989,6 +1991,23 @@ function App() {
             <span>{shownClue.kind.toUpperCase()}</span>
             <span>EVIDENCE / {shownClue.id.toUpperCase()}</span>
           </div>
+          {room.case.id === "last-announcement" && shownClue.id === "note" && (
+            <figure className="clue-artwork">
+              <img
+                src="/art/arun-note.jpg"
+                alt="Illustration of Arun’s handwritten note on the station desk"
+              />
+              <figcaption>
+                Illustration · the exact clue transcription follows below.
+              </figcaption>
+            </figure>
+          )}
+          {room.case.id === "last-announcement" && shownClue.id === "found" && (
+            <figure className="found-character">
+              <CharacterPortrait id="arun" />
+              <figcaption>Arun Sen · station master</figcaption>
+            </figure>
+          )}
           <div className="evidence-paper">
             <span className="paper-stamp">
               DO DUNIYA / CASE {room.case.number}
