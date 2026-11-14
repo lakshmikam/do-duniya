@@ -568,6 +568,8 @@ BLUE = {
 
 CASES = {c["id"]: c for c in [TRAIN, BLUE]}
 expand_cast(CASES)
+from .story_content import enrich
+enrich(CASES)
 
 
 def catalog():
@@ -584,6 +586,7 @@ def catalog():
         "credit",
         "source",
         "roles",
+        "hook",
     ]
     return [{k: c[k] for k in fields} for c in CASES.values()]
 
@@ -599,9 +602,25 @@ def validate_cases():
         for e in c["evidence"]:
             assert e["location"] in locations and set(e["requires"]) <= ids
         for ch in c["characters"]:
+            assert ch['role'] in c['roles'] and ch['location'] in locations
+            assert set(ch.get('requires',[])) <= ids
             for r in ch["responses"]:
                 assert set(r["requires"]) <= ids
                 assert not r["reveals"] or r["reveals"] in ids
+        claims={x['id']:x for x in c.get('claims',[])}
+        assert len(claims)==len(c.get('claims',[]))
+        characters={x['id'] for x in c['characters']}
+        for claim in claims.values():
+            assert claim['character_id'] in characters
+            assert set(claim.get('contradicted_by',[])+claim.get('supported_by',[]))<=ids
+        for ch in c['characters']:
+            levels=[s['level'] for s in ch.get('stages',[])]
+            assert levels==sorted(set(levels))
+            for stage in ch.get('stages',[]):
+                assert set(stage.get('requires_known',[])+stage.get('grants',[]))<=ids
+                for claim,evidence in stage.get('requires_challenges',[]):
+                    assert claim in claims and claims[claim]['character_id']==ch['id']
+                    assert evidence in claims[claim].get('contradicted_by',[])
 
 
 validate_cases()

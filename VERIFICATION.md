@@ -237,3 +237,12 @@ Live synthetic Hindi-to-Telugu partner relay: original preserved, Telugu script 
 Room artwork, people and markers now share a1200×720 camera and uniform fit; the scene is no longer cropped to fill. Player and NPC art use a consistent illustration family and larger world-scale dimensions. Muted brass/sage/charcoal palettes replace bright accents. Phone controls use a readable action list below the full room. Dialogue topic expansion is in normal flow; notifications no longer cover the instruction strip.
 
 Browser observations: desktop Baker Street, phone scene, Henry conversation and notebook were inspected. The phone page reported no document overflow. Browser screenshot capture subsequently timed out; Windows fallback stopped because it could not determine the current URL reliably. No complete screenshot matrix or final visual approval is claimed. No clue, solution, provider or access changes in this revision; public entry stays enabled.
+# Story revision verification on 11 November 2026
+
+Branch: `codex/story-cooperation-rework`. The story reference is the user-supplied `doduniya.pdf`; implementation choices and scope are recorded in `STORY_DESIGN.md`.
+
+- 81 backend tests passed, including authenticated two-player playthroughs of both cases, reciprocal witness changes, each accepted evidence set, epilogue agreement and disagreement, role restrictions, repeated challenges, pressure recovery, model-off/error/timeout fallback and malicious model output. Run locally with Python 3.14; deployment and CI still target Python 3.11.
+- `npm run build` passed. Presentation, geometry, startup, voice-capture, sound and theme scripts passed. These are automated checks, not a claim about live microphone or provider quality.
+- Local in-app browser verification at the default 1280 by 720 viewport and a temporary 375 by 812 viewport: witness conversation and evidence-comparison controls are usable; confirming Baker's statement updates its shared notebook status; statement pages fit without horizontal document overflow at phone width. The viewport override was reset afterward.
+- No paid provider requests, deployment, remote CI run, physical-phone microphone test or human two-person timing study was performed. A simple original vector portrait stands in for Mrs Oakshott; existing raster scenes and the other character assets are retained.
+- Isolated local preview uses ports 5177 and 8022 with provider keys disabled and a separate SQLite database. The earlier 66-test baseline also passed before the added story tests.

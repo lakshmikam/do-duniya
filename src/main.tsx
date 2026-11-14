@@ -49,6 +49,7 @@ import { InvestigationScene } from "./game/InvestigationScene";
 import type { RadioPacket } from "./game/PartnerRadio";
 
 import { CaseNotebook } from "./game/CaseNotebook";
+import { WitnessChallenge, type Statement } from "./game/WitnessChallenge";
 
 type Case = {
   id: string;
@@ -74,6 +75,10 @@ type Evidence = {
   shared: boolean;
 };
 type Character = {
+  emotion?: string;
+  demeanor?: string;
+  stage?: number;
+  clamped?: boolean;
   voice_profile?: { voice: string; tone: string };
   id: string;
   name: string;
@@ -83,6 +88,17 @@ type Character = {
   topics: { id: string; label: string }[];
 };
 type Room = {
+  statements?: Statement[];
+  story_banner?: string;
+  epilogue?: {
+    question: string;
+    options: { id: string; label: string }[];
+    your_choice?: string;
+    votes: { name: string; choice?: string }[];
+    agreed: boolean;
+    text?: string;
+    closing?: string;
+  };
   objective?: {
     phase: string;
     text: string;
@@ -629,6 +645,15 @@ function App() {
     return () => clearInterval(t);
   }, []);
   useEffect(() => {
+    if (!room || room.status !== "playing" || sessionConflict) return;
+    const pulse = setInterval(() => {
+      void request(`/rooms/${room.code}/pulse`, {}, token)
+        .then(sync)
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(pulse);
+  }, [room?.code, room?.status, token, sessionConflict]);
+  useEffect(() => {
     if (!room) return;
     const available = room.locations.filter((l) => !l.locked);
     if (!available.some((l) => l.id === locationId))
@@ -637,6 +662,14 @@ function App() {
     room?.you.role,
     room?.locations.map((l) => l.id + String(l.locked)).join(","),
   ]);
+  useEffect(() => {
+    if (!witness || !room) return;
+    const live = room.characters.find((c) => c.id === witness.id);
+    if (live) {
+      setDialogue(live.initial);
+      setTranslation("");
+    }
+  }, [witness?.id, room?.characters.find((c) => c.id === witness?.id)?.stage]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 3500);
@@ -822,7 +855,7 @@ function App() {
     setError("");
     try {
       const data = await request(
-        `/rooms/${room.code}/ask`,
+        `/rooms/${room.code}/talk`,
         { character: witness.id, topic, question },
         token,
       );
@@ -1695,6 +1728,70 @@ function App() {
               </div>
             </aside>
           </div>
+          {room.result?.success && room.epilogue && (
+            <section
+              className="story-epilogue"
+              aria-label="Choose the ending together"
+            >
+              <span className="eyebrow">ONE LAST DECISION / OPTIONAL</span>
+              <h2>{room.epilogue.question}</h2>
+              {room.epilogue.agreed ? (
+                <>
+                  <p>{room.epilogue.text}</p>
+                  <blockquote>{room.epilogue.closing}</blockquote>
+                </>
+              ) : (
+                <>
+                  <p>
+                    The facts are settled. Choose how your report closes the
+                    case. Both investigators must agree.
+                  </p>
+                  <div className="epilogue-options">
+                    {room.epilogue.options.map((o) => (
+                      <button
+                        key={o.id}
+                        className={
+                          room.epilogue?.your_choice === o.id
+                            ? "primary"
+                            : "secondary"
+                        }
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            sync(
+                              await request(
+                                `/rooms/${room.code}/epilogue`,
+                                { choice: o.id },
+                                token,
+                              ),
+                            );
+                          } catch (e) {
+                            setError((e as Error).message);
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        {o.label}
+                        {room.epilogue?.your_choice === o.id
+                          ? " · your choice"
+                          : ""}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="smallprint">
+                    {room.epilogue.votes
+                      .map(
+                        (v) =>
+                          `${v.name}: ${room.epilogue?.options.find((o) => o.id === v.choice)?.label || "considering"}`,
+                      )
+                      .join(" · ")}
+                  </p>
+                </>
+              )}
+            </section>
+          )}
           {!room.result?.success && (
             <button
               className="primary"
@@ -1840,6 +1937,15 @@ function App() {
                   </p>
                 </details>
               </div>
+              {room.story_banner && (
+                <details className="story-dispatch">
+                  <summary>Latest dispatch</summary>
+                  <p>{room.story_banner}</p>
+                  <small>
+                    The clock adds atmosphere. Your investigation can continue.
+                  </small>
+                </details>
+              )}
               <InvestigationScene
                 key={room.code + "|" + room.you.role + "|" + locationId}
                 location={locationId}
@@ -1878,6 +1984,17 @@ function App() {
                     setWitness(c);
                     setDialogue(c.initial);
                     setQuestion("");
+                    const epoch = viewEpoch.current;
+                    void request(
+                      `/rooms/${room.code}/encounter`,
+                      { character: c.id },
+                      token,
+                    )
+                      .then((data) => {
+                        if (epoch !== viewEpoch.current) return;
+                        sync(data.room);
+                      })
+                      .catch((e) => setError(e.message));
                   }
                 }}
               />
@@ -2054,6 +2171,19 @@ function App() {
             <GameCharacter id={currentWitness.id} talking={speaking} />
             <div>
               <span className="eyebrow">{currentWitness.occupation}</span>
+              <span
+                className={
+                  "witness-demeanor " + (currentWitness.emotion || "neutral")
+                }
+              >
+                {currentWitness.clamped
+                  ? "Taking a moment · return shortly"
+                  : currentWitness.emotion === "cracked"
+                    ? "Their account has changed"
+                    : currentWitness.emotion === "nervous"
+                      ? "Unsettled"
+                      : "Listening"}
+              </span>
               <p>
                 {currentWitness.voice_profile?.tone ||
                   "Ask about a lead. Present evidence when you have it."}
@@ -2062,6 +2192,19 @@ function App() {
           </div>
           <div className="speech-bubble" key={dialogue}>
             <span className="speaker-name">{currentWitness.name}</span>
+            <span
+              className={
+                "witness-demeanor " + (currentWitness.emotion || "neutral")
+              }
+            >
+              {currentWitness.clamped
+                ? "Taking a moment · return shortly"
+                : currentWitness.emotion === "cracked"
+                  ? "Their account has changed"
+                  : currentWitness.emotion === "nervous"
+                    ? "Unsettled"
+                    : "Listening"}
+            </span>
             {room.you.language !== "en" && !translation && (
               <small className="language-status" role="status">
                 {voiceBusy
@@ -2099,6 +2242,43 @@ function App() {
           <div className="dialogue-source">
             WITNESS ACCOUNT · {currentWitness.name}
           </div>
+          <WitnessChallenge
+            character={currentWitness.id}
+            statements={room.statements || []}
+            evidence={room.evidence}
+            disabled={
+              busy ||
+              room.status !== "playing" ||
+              currentWitness.clamped ||
+              !!sessionConflict
+            }
+            onPresent={async (claim_id, evidence_id) => {
+              const epoch = viewEpoch.current;
+              setBusy(true);
+              try {
+                const result = await request(
+                  `/rooms/${room.code}/challenge`,
+                  { character: currentWitness.id, claim_id, evidence_id },
+                  token,
+                );
+                if (epoch !== viewEpoch.current) return;
+                setTranslation("");
+                setDialogue(result.text);
+                sync(result.room);
+                setToast(
+                  result.result === "contradiction"
+                    ? "A contradiction is recorded in both notebooks."
+                    : result.result === "supported"
+                      ? "The record supports this statement."
+                      : "Compare the exact claim with the evidence.",
+                );
+              } catch (e) {
+                setError((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
           {!soundOn && (
             <button className="primary full" onClick={() => void enableSound()}>
               <Headphones size={18} /> Enable automatic character voices
@@ -2122,6 +2302,7 @@ function App() {
             token={token}
             character={currentWitness.id}
             name={currentWitness.name}
+            endpoint="talk"
             language={room.you.language}
             enabled={!sessionConflict && room.status === "playing"}
             soundEnabled={soundOn}
@@ -2208,7 +2389,7 @@ function App() {
                   placeholder={
                     room.providers.gemini
                       ? "What would you like to ask?"
-                      : "Configure Gemini to ask freely; topics above work now."
+                      : "Ask about their account, or use a topic above."
                   }
                 />
                 <button
@@ -2234,7 +2415,6 @@ function App() {
                     busy ||
                     voiceBusy ||
                     !question.trim() ||
-                    !room.providers.gemini ||
                     room.status !== "playing"
                   }
                   aria-label="Ask witness"
@@ -2348,6 +2528,7 @@ function App() {
           caseTitle={room.case.title}
           caseNumber={room.case.number}
           evidence={room.evidence}
+          statements={room.statements}
           messages={room.messages}
           hints={room.coach_hints}
           hintsRemaining={room.hints_remaining ?? 3}
