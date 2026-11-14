@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Fingerprint, Volume2, X } from "lucide-react";
+import { StatementPages, type Statement } from "./WitnessChallenge";
 
 export type NotebookEvidence = {
   id: string;
@@ -27,6 +28,7 @@ export type CaseNotebookProps = {
   onRead?: (evidence: NotebookEvidence) => void;
   onHint?: () => void;
   hintsRemaining?: number;
+  statements?: Statement[];
 };
 
 function finder(role: string) {
@@ -58,12 +60,15 @@ export function CaseNotebook({
   onRead,
   onHint,
   hintsRemaining = 0,
+  statements = [],
 }: CaseNotebookProps) {
   const titleId = useId(),
     pageId = useId(),
     selectId = useId();
   const [selectedId, setSelectedId] = useState(evidence[0]?.id || ""),
-    [section, setSection] = useState<"evidence" | "hints">("evidence"),
+    [section, setSection] = useState<"evidence" | "hints" | "statements">(
+      "evidence",
+    ),
     [freshIds, setFreshIds] = useState<Set<string>>(new Set());
   const dialog = useRef<HTMLDivElement>(null),
     page = useRef<HTMLDivElement>(null),
@@ -238,6 +243,13 @@ export function CaseNotebook({
                 Evidence <span>{evidence.length}</span>
               </button>
               <button
+                aria-pressed={section === "statements"}
+                className={section === "statements" ? "selected" : ""}
+                onClick={() => setSection("statements")}
+              >
+                Statements <span>{statements.length}</span>
+              </button>
+              <button
                 aria-pressed={section === "hints"}
                 className={section === "hints" ? "selected" : ""}
                 onClick={() => setSection("hints")}
@@ -245,7 +257,10 @@ export function CaseNotebook({
                 Case assistant <span>{hints.length}</span>
               </button>
             </nav>
-            <div className="notebook-mobile-index">
+            <div
+              className="notebook-mobile-index"
+              hidden={section !== "evidence"}
+            >
               <label htmlFor={selectId}>Open an evidence page</label>
               <select
                 id={selectId}
@@ -299,7 +314,10 @@ export function CaseNotebook({
               <span className="notebook-seal" aria-hidden="true">
                 D / D
               </span>
-              <p>Private discoveries remain private until you share them.</p>
+              <p>
+                Discovered clues sync automatically. Witness claims still need
+                testing.
+              </p>
             </div>
           </aside>
           <div className="notebook-binding" aria-hidden="true">
@@ -312,7 +330,9 @@ export function CaseNotebook({
             aria-label="Open journal page"
           >
             <div className="notebook-page-scroll" ref={page}>
-              {section === "hints" ? (
+              {section === "statements" ? (
+                <StatementPages statements={statements} />
+              ) : section === "hints" ? (
                 <article className="notebook-sheet" key="notes">
                   <p className="notebook-small-caps">
                     Marginalia / requested hints
@@ -457,9 +477,11 @@ export function CaseNotebook({
               <span role="status" aria-live="polite">
                 {section === "hints"
                   ? "Case assistant"
-                  : index >= 0
-                    ? `${index + 1} / ${evidence.length}`
-                    : "— / —"}
+                  : section === "statements"
+                    ? "Witness statements"
+                    : index >= 0
+                      ? `${index + 1} / ${evidence.length}`
+                      : "— / —"}
               </span>
               <button
                 disabled={

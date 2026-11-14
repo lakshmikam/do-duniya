@@ -86,6 +86,8 @@ def install(app, game):
                         if game.case(r)["id"] == "last-announcement"
                         else "Follow the bird’s journey separately from the hotel accusation. Compare the two trails before choosing who to believe."
                     )
+                if topic == 'nudge':
+                    text = game.comparison_hint(game.case(r),r) or text
                 hint = {
                     "id": secrets.token_hex(6),
                     "text": text[:1700],

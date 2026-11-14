@@ -220,8 +220,10 @@ def test_both_cases_completable_without_provider_calls(case_id):
         for id in ["alpha", "ryder"]:
             inspect_share(code, t, id)
         act(code, t, "switch")
-        for id in ["supplier", "twins"]:
-            inspect_share(code, t, id)
+        inspect_share(code, t, 'supplier')
+        for character,topic in [('dealer','visitor'),('oakshott','twins')]:
+            response=client.post(f'/api/rooms/{code}/ask',headers=headers(t),json={'character':character,'topic':topic})
+            assert response.status_code==200
         client.post(
             f"/api/rooms/{code}/ask",
             headers=headers(t),

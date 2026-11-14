@@ -18,7 +18,32 @@ def handoff_prompt(evidence_id):
         "visitor": "Does this visitor appear in the hotel records?",
         "ryder": "Compare this hotel role with the visitor at the market.",
         "twins": "Could someone have taken the wrong bird?",
+        "leela_admission": "Does this paid absence change what the key loan meant? Ask Mira.",
+        "mira_admission": "Compare the favor with the clerk’s claim that he never used the cupboard.",
     }.get(evidence_id, "What does this change about our explanation?")
+
+
+def comparison_hint(c, r):
+    """Name a missing comparison without revealing a culprit or a secret."""
+    k = set(r['shared'])
+    pairs = {tuple(p) for p in r.get('challenges', [])}
+    if c['id'] == 'last-announcement':
+        if 'broadcast' in k and ('mira_control', 'broadcast') not in pairs:
+            return 'Compare Mira’s claim of a live warning with the announcement log. Visit her and present the passage that disagrees.'
+        if 'receipt' in k and 'leela_admission' not in k:
+            return 'Compare Leela’s claim about staying by the coach with the canteen receipt. Your records partner can check which clock those times use.'
+        if 'leela_admission' in k and 'mira_admission' not in k:
+            return 'The paid absence changes the context of the borrowed key. Ask Mira about her account, then compare it with the register.'
+        if {'docket', 'access'} <= k and 'admission' not in k:
+            return 'Compare the urgent-pickup claim with the approval, and the parcel-office claim with the key register. Present each contradiction separately.'
+    else:
+        if {'arrest', 'cusack'} <= k and ('brad_proof', 'cusack') not in pairs:
+            return 'Bradstreet says the paperwork proves the theft. Compare the accusation and the maid’s statement with what each actually establishes.'
+        if 'supplier' in k and 'visitor' not in k:
+            return 'Compare the dealer’s claim about Essex with his supplier account. One gives you a new person to ask about.'
+        if {'visitor', 'ryder'} <= k and 'confession' not in k:
+            return 'Compare the visitor’s denial about a goose with the dealer’s testimony. Then test his claim of exclusive access against the hotel record.'
+    return None
 
 
 def next_objective(c, r, p):
@@ -205,10 +230,11 @@ def next_objective(c, r, p):
                 ("supplier",),
             )
         if "twins" not in known:
-            return find(
-                "twins",
-                "Follow the supplier to Brixton Road. Check what made the birds easy to confuse.",
+            return talk(
+                "oakshott", "twins",
+                "Follow the supplier to Brixton Road. Ask Mrs Oakshott about the similar birds.",
                 "I’m checking the birds at Brixton Road. Compare the visitor with the hotel record.",
+                ("supplier",),
             )
         if "ryder" not in known:
             return ask(

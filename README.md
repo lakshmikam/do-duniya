@@ -4,6 +4,8 @@ A two-player mystery with complementary roles, voice conversations and an automa
 team notebook. One player investigates the scene; the other checks the records.
 Both see the chapter question; optional notebook hints help when they are stuck.
 
+The story revision adds shared witness statements and evidence-backed challenges. Test a specific claim with a discovered passage to change an account, follow reciprocal leads between the roles, and choose a joint epilogue after solving the case. Arun and Mrs Oakshott now have direct conversations. See [STORY_DESIGN.md](STORY_DESIGN.md) for the full spoiler-filled design and model boundaries.
+
 Current playtest build: https://do-duniya-test.onrender.com (public room entry).
 
 ## Current game loop
@@ -41,7 +43,7 @@ story text. It never chooses the culprit or invents the case truth.
 The server controls clues, role access, unlocks and the final two-player decision.
 Unfound evidence remains hidden. Discovered evidence is intentionally visible to
 both authenticated players. Model calls are bounded and serialized for Gnani;
-failed calls do not silently substitute fabricated model outputs. English authored
+failed calls do not silently substitute fabricated model outputs. The new character `/talk` path explicitly returns an authored current-stage reply when routing is unavailable. English authored
 buttons complete both mysteries without API calls.
 
 ## Verification

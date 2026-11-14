@@ -12,7 +12,7 @@ type Phase =
   | "thinking"
   | "speaking";
 type Props = {
-  endpoint?: "ask" | "coach";
+  endpoint?: "ask" | "coach" | "talk";
   turnLimit?: number;
   code: string;
   token: string;
